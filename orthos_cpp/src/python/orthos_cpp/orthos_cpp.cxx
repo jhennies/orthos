@@ -57,9 +57,9 @@ namespace python = boost::python;
 
 
 
-BOOST_PYTHON_MODULE_INIT(_core)
+BOOST_PYTHON_MODULE_INIT(_orthos_cpp)
 {
-    import_vigranumpy();
+    vigra::import_vigranumpy();
 
     python::docstring_options doc_options(true, true, false);
 

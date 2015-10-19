@@ -2,11 +2,15 @@ import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
 import vigra
 import numpy
-from blocking import *
+#from blocking import *
 from functools import partial
-from orthos.graphicsItems import *
+from  infinite_grid_lines import *
 
 
+def axisColor(axis):
+    c=[0,0,0]
+    c[axis] =255
+    return c
 
 
 class InfiniteBlockedViewBox(pg.ViewBox):
@@ -20,10 +24,18 @@ class InfiniteBlockedViewBox(pg.ViewBox):
     sigPixelSizeChanged = QtCore.Signal(object)
     sigRectChanged = QtCore.Signal(object)
 
-    def __init__(self, axis=2, blockSizes=[128,256,512,1024,2048], minPixelSize=None, maxPixelSize=None):
+    def __init__(self, scrollAxis=2, viewAxis=[0,1], blockSizes=[128,256,512,1024,2048], 
+                      minPixelSize=None, maxPixelSize=None):
 
 
         super(InfiniteBlockedViewBox,self).__init__(invertY=True,lockAspect=True)
+        
+        self.scrollAxis = scrollAxis
+        self.viewAxis = viewAxis
+        self.scrollCoordinate = 0
+        self.blockSizes = blockSizes
+        self.pixelSizes = [1,2,4,8,16]
+
         self.setRange( xRange=(0,1000),yRange=(0,1000), disableAutoRange=True)
         self.setAspectLocked(True)
         self.setMenuEnabled(False)
@@ -37,7 +49,6 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         # connect range changed events
         self.sigXRangeChanged.connect(self.rangeChanged)
         self.sigYRangeChanged.connect(self.rangeChanged)
-
         self.sigPixelSizeChanged.connect(self.onPixelSizeChanged)
 
 
@@ -45,12 +56,28 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         self.maxPixelSize = maxPixelSize
 
 
-        self.blockSizes = blockSizes
-        self.pixelSizes = [1,2,4,8,16]
+
+        
+        # grid lines
         self.gridLines = InfiniteGridLines(self,blockSizes=self.blockSizes)
         self.addItem(self.gridLines)
 
+        #navigation lines
+        self.axis0Line = pg.InfiniteLine(movable=True, angle=90,pen=pg.mkPen(color=axisColor(viewAxis[0]),width=3))
+        self.axis1Line = pg.InfiniteLine(movable=True, angle=0 ,pen=pg.mkPen(color=axisColor(viewAxis[1]),width=3))
+
+        def fo():
+            print self.axis0Line.pos()
+        self.axis0Line.sigPositionChanged.connect(fo)
+
+        self.addItem(self.axis0Line, ignoreBounds=True)
+        self.addItem(self.axis1Line, ignoreBounds=True)
+
+
         self.bestBlockIndex = None 
+
+
+
 
     def findBestBlockIndex(self):
         bestBlockIndex = 0
@@ -60,7 +87,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         else:
             for i,(blockPixelSize,bz) in enumerate(zip(self.pixelSizes,self.blockSizes)):
 
-                if i == len(self.blockSizes):
+                if i == len(self.blockSizes)-1:
                     bestBlockIndex = i 
                     break
                 if ps >= blockPixelSize and ps < self.pixelSizes[i+1]:
@@ -98,7 +125,15 @@ class InfiniteBlockedViewBox(pg.ViewBox):
     def onPixelSizeChanged(self, pz):
         self.bestBlockIndex = self.findBestBlockIndex()
         print "best index",self.bestBlockIndex
-            
+    
+    def changeScrollCoordinate(self, newScrollCoordinate):
+        self.scrollCoordinate = newScrollCoordinate
+
+
+    def onExternalAxisLineChanged(self, arg):
+        self.changeScrollCoordinate(arg.value())
+        self.sigScrolled.emit(arg.value())
+
 
 
     def rectChanged(self, vr):
@@ -131,19 +166,14 @@ class InfiniteBlockedViewBox(pg.ViewBox):
                 super(InfiniteBlockedViewBox,self).wheelEvent(ev, axis)
         else:
             pass
-        #    d = (ev.delta() * self.state['wheelScaleFactor'])
-        #    if d<0:
-        #        d = 1*f
-        #    else:
-        #        d =-1*f
-        #    currentPos = self.viewerPos[self.axis]
-        #    newPos = currentPos + d
-        #    s = self.inputShape.spatialShape[self.axis] 
-        #    if newPos >=0 and newPos<s:
-        #        axisPos=newPos
-        #        self.coordinatesText.setText("[%d/%s]"%(axisPos,s))
-        #        self.viewerPos[self.axis] = axisPos
-        #        self.sigScrolled.emit(axisPos)
+            d = (ev.delta() * self.state['wheelScaleFactor'])
+            if d<0:
+                d = 1*f
+            else:
+                d =-1*f
+            self.scrollCoordinate +=d
+            self.changeScrollCoordinate(self.scrollCoordinate)
+            self.sigScrolled.emit(self.scrollCoordinate)
 
 
 
