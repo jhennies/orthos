@@ -40,6 +40,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         self.viewAxis = viewAxis
         self.scrollCoordinate = 0
         
+        #self.setLimits(xMin=0,yMin=0)
         self.setRange( xRange=(0,1000),yRange=(0,1000), disableAutoRange=True)
         self.setAspectLocked(True)
         self.setMenuEnabled(False)
@@ -71,6 +72,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         # render area
         self.renderArea = RenderArea(self)
         self.addItem(self.renderArea)
+        self.sigRectChanged.connect(self.renderArea.boundingRectChanged)
 
         #navigation lines
         self.axis0Line = InfiniteLine(movable=True, angle=90,pen=pg.mkPen(color=axisColor(viewAxis[0]),width=3))
@@ -147,15 +149,15 @@ class InfiniteBlockedViewBox(pg.ViewBox):
 
     def rectChanged(self, vr):
         #print "rect changed"
+        pass
+        #vr = numpy.round(self.viewRange(),0).astype('int64')
+        #vr /= self.blockSizes[0]
 
-        vr = numpy.round(self.viewRange(),0).astype('int64')
-        vr /= self.blockSizes[0]
+        #minBlockCoord = vr[:,0]
+        #maxBlockCoord = vr[:,1]
 
-        minBlockCoord = vr[:,0]
-        maxBlockCoord = vr[:,1]
-
-        print "min:",minBlockCoord
-        print "max:",maxBlockCoord
+        #print "min:",minBlockCoord
+        #print "max:",maxBlockCoord
 
     # events from user
     def mouseDragEvent(self, ev, axis=None):

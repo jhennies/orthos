@@ -1,5 +1,5 @@
 from abc import abstractmethod
-
+from pyqtgraph.Qt import QtGui, QtCore
 
 
 class DataSourceBase(object):
@@ -42,16 +42,16 @@ class LayerBase(object):
 
 
     sigAlphaChanged = QtCore.Signal(object)
-    sigVisibilityChanged = QCore.Signal(object)
-    sigSpatialBoundsChanged = QCore.Signal(object)
-    sigTimeBoundsChanged = QCore.Signal(object)
-    sigLayerZValueChanged = QCore.Signal(object)
-    sigPriorityChanged = QCore.Signal(object)
-    sigNameChanged = QCore.Signal(object)
+    sigVisibilityChanged = QtCore.Signal(object)
+    sigSpatialBoundsChanged = QtCore.Signal(object)
+    sigTimeBoundsChanged = QtCore.Signal(object)
+    sigLayerZValueChanged = QtCore.Signal(object)
+    sigPriorityChanged = QtCore.Signal(object)
+    sigNameChanged = QtCore.Signal(object)
 
     def __init__(self, name, layerZValue, alpha=1.0, visible=True, 
-                 spatialBounds=(None,None,None), 
-                 timeBounds=None,priority=1):
+                 spatialBounds=(None,None), 
+                 timeBounds=(None,None),priority=1):
 
         self.name_ = name
         self.layerZValue_ = layerZValue
@@ -105,9 +105,29 @@ class LayerBase(object):
         return self.layerZValue_
 
 
-class PixelLayerBase(object):
-    def __init__(self):
-        pass
+class PixelLayerBase(LayerBase):
+    def __init__(self, name, layerZValue=1, alpha=1.0, visible=True, 
+                 spatialBounds=(None,None,None), 
+                 timeBounds=None,priority=1):
+        super(PixelLayerBase,self).__init__(name=name, layerZValue=layerZValue, alpha=alpha, 
+                           visible=visible,spatialBounds=spatialBounds, 
+                           timeBounds=timeBounds,priority=priority)
+
+class H5PixelLayer(PixelLayerBase):
+    def __init__(self, dset, name):
+
+        self.dset = dset
+        self.shape = self.dset.shape
+        spatialBounds=((0,0,0), self.shape)
+        timeBounds=(0,1)
+        super(H5PixelLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
+
+    def request3Dblock(self, slicing):
+        #print slicing
+        for i,s in enumerate(slicing):
+            if s.start < 0 or s.stop>self.shape[i]:
+                return None
+        return self.dset[tuple(slicing)]
 
 class PixelSegmentationEdgeLayerBase(object):
     def __init__(self):
