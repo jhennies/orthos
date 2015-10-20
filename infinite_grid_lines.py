@@ -8,12 +8,16 @@ class InfiniteGridLines(pg.GraphicsObject):
         self.viewBox = viewBox
         self.blockSizes = [64,128,256,512, 1024, 2048]
         self.pixelSize =  [1,2,4,8,16]
+        self.lastPixelSize = (1.0,1.0)
     def boundingRect(self):
         return self.viewBox.viewRect()
     def paint(self, p, *args):
 
-        pixSize =  self.viewBox.viewPixelSize()
-
+        try:
+            pixSize =  self.viewBox.viewPixelSize()
+        except:
+            pixSize = self.lastPixelSize
+        self.lastPixelSize = pixSize
         vrx = self.viewBox.state['viewRange'][0]
         vry = self.viewBox.state['viewRange'][1]
 

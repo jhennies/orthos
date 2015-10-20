@@ -5,7 +5,7 @@ import numpy
 #from blocking import *
 from functools import partial
 from  infinite_grid_lines import *
-
+from  infinite_line import *
 
 def axisColor(axis):
     c=[0,0,0]
@@ -16,7 +16,7 @@ def axisColor(axis):
 class InfiniteBlockedViewBox(pg.ViewBox):
 
 
-    sigScrolled = QtCore.Signal(object)                         
+    #sigScrolled = QtCore.Signal(object)                         
     sigBlocksAppeared = QtCore.Signal(object)
     sigBlocksDisappeared = QtCore.Signal(object)
     sigMoveOtherViewers = QtCore.Signal(object, object)
@@ -24,18 +24,22 @@ class InfiniteBlockedViewBox(pg.ViewBox):
     sigPixelSizeChanged = QtCore.Signal(object)
     sigRectChanged = QtCore.Signal(object)
 
-    def __init__(self, scrollAxis=2, viewAxis=[0,1], blockSizes=[128,256,512,1024,2048], 
+    def __init__(self, navigator,scrollAxis=2, viewAxis=[0,1], blockSizes=[128,256,512,1024,2048], 
                       minPixelSize=None, maxPixelSize=None):
 
-
-        super(InfiniteBlockedViewBox,self).__init__(invertY=True,lockAspect=True)
-        
-        self.scrollAxis = scrollAxis
-        self.viewAxis = viewAxis
-        self.scrollCoordinate = 0
         self.blockSizes = blockSizes
         self.pixelSizes = [1,2,4,8,16]
 
+        self.imageItemDict = dict()
+        for ps in self.pixelSizes:
+            self.imageItemDict[ps] = dict()
+
+        super(InfiniteBlockedViewBox,self).__init__(invertY=True,lockAspect=True)
+        self.navigator = navigator
+        self.scrollAxis = scrollAxis
+        self.viewAxis = viewAxis
+        self.scrollCoordinate = 0
+        
         self.setRange( xRange=(0,1000),yRange=(0,1000), disableAutoRange=True)
         self.setAspectLocked(True)
         self.setMenuEnabled(False)
@@ -52,6 +56,8 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         self.sigPixelSizeChanged.connect(self.onPixelSizeChanged)
 
 
+        self.sigRectChanged.connect(self.rectChanged)
+
         self.minPixelSize = minPixelSize
         self.maxPixelSize = maxPixelSize
 
@@ -59,16 +65,26 @@ class InfiniteBlockedViewBox(pg.ViewBox):
 
         
         # grid lines
-        self.gridLines = InfiniteGridLines(self,blockSizes=self.blockSizes)
-        self.addItem(self.gridLines)
+        #self.gridLines = InfiniteGridLines(self,blockSizes=self.blockSizes)
+        #self.addItem(self.gridLines)
+
+        # render area
+        self.renderArea = RenderArea(self)
+        self.addItem(self.renderArea)
 
         #navigation lines
-        self.axis0Line = pg.InfiniteLine(movable=True, angle=90,pen=pg.mkPen(color=axisColor(viewAxis[0]),width=3))
-        self.axis1Line = pg.InfiniteLine(movable=True, angle=0 ,pen=pg.mkPen(color=axisColor(viewAxis[1]),width=3))
+        self.axis0Line = InfiniteLine(movable=True, angle=90,pen=pg.mkPen(color=axisColor(viewAxis[0]),width=3))
+        self.axis1Line = InfiniteLine(movable=True, angle=0 ,pen=pg.mkPen(color=axisColor(viewAxis[1]),width=3))
 
-        def fo():
-            print self.axis0Line.pos()
-        self.axis0Line.sigPositionChanged.connect(fo)
+        def a0Changed(line):
+            v = int(line.value()+0.5)
+            self.navigator.changedPlane(self.viewAxis[0],v,self.axis0Line)
+        def a1Changed(line):
+            v = int(line.value()+0.5)
+            self.navigator.changedPlane(self.viewAxis[1],v)
+        self.axis0Line.sigPositionChanged.connect(a0Changed)
+        self.axis1Line.sigPositionChanged.connect(a1Changed)
+
 
         self.addItem(self.axis0Line, ignoreBounds=True)
         self.addItem(self.axis1Line, ignoreBounds=True)
@@ -129,17 +145,17 @@ class InfiniteBlockedViewBox(pg.ViewBox):
     def changeScrollCoordinate(self, newScrollCoordinate):
         self.scrollCoordinate = newScrollCoordinate
 
-
-    def onExternalAxisLineChanged(self, arg):
-        self.changeScrollCoordinate(arg.value())
-        self.sigScrolled.emit(arg.value())
-
-
-
     def rectChanged(self, vr):
-        print "rect changed"
+        #print "rect changed"
 
+        vr = numpy.round(self.viewRange(),0).astype('int64')
+        vr /= self.blockSizes[0]
 
+        minBlockCoord = vr[:,0]
+        maxBlockCoord = vr[:,1]
+
+        print "min:",minBlockCoord
+        print "max:",maxBlockCoord
 
     # events from user
     def mouseDragEvent(self, ev, axis=None):
@@ -172,10 +188,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
             else:
                 d =-1*f
             self.scrollCoordinate +=d
-            self.changeScrollCoordinate(self.scrollCoordinate)
-            self.sigScrolled.emit(self.scrollCoordinate)
-
-
+            self.navigator.changedPlane(self.scrollAxis,self.scrollCoordinate)
 
 
 if __name__ == "__main__":

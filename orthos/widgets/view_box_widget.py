@@ -9,35 +9,54 @@ from  ..graphicsItems.infinite_blocked_view_box import *
 
 aixsLetters={0:'x',1:'y',2:'z'}
 
+class Navigator(object):
+    def __init__(self):
+        self.planePosition = [0,0,0]
+        self.viewBoxWidgets = []
 
+    def setViewBoxWidgets(self, viewBoxWidgets):
+        self.viewBoxWidgets = viewBoxWidgets
+
+    def changedPlane(self, scrollAxis, scrollAxisCoordinate, updatedBy=None):
+        self.planePosition[scrollAxis] = scrollAxisCoordinate
+        print self.planePosition
+        for vbw in self.viewBoxWidgets:
+            vb = vbw.viewBox
+            if vb.scrollAxis == scrollAxis:
+                vb.changeScrollCoordinate(scrollAxisCoordinate)
+                vbw.onScrolled(scrollAxisCoordinate)
+            else:
+                if vb.viewAxis[0] == scrollAxis:
+                    if vb.axis0Line != updatedBy:
+                        vb.axis0Line.setPos((scrollAxisCoordinate,0),silent=True)
+                else:
+                    if vb.axis1Line != updatedBy:
+                        vb.axis1Line.setPos((0,scrollAxisCoordinate),silent=True)
 
 def linked3dViewBoxWidgets():
 
-    x = ViewBoxWidget(scrollAxis=0, viewAxis=[1,2])
-    y = ViewBoxWidget(scrollAxis=1, viewAxis=[0,2])
-    z = ViewBoxWidget(scrollAxis=2, viewAxis=[0,1])
+    navigator = Navigator()
+    x = ViewBoxWidget(navigator=navigator,scrollAxis=0, viewAxis=[1,2])
+    y = ViewBoxWidget(navigator=navigator,scrollAxis=1, viewAxis=[0,2])
+    z = ViewBoxWidget(navigator=navigator,scrollAxis=2, viewAxis=[0,1])
+    navigator.setViewBoxWidgets([x,y,z])
 
-    x.connectOtherViewBoxWidgets([y,z])
-    y.connectOtherViewBoxWidgets([x,z])
-    z.connectOtherViewBoxWidgets([x,y])
-
-    return [x,y,z]
+    return [x,y,z], navigator
 
 
 class ViewBoxWidget(QtGui.QWidget):
-    def __init__(self, scrollAxis=0, viewAxis=[0,1], 
+    def __init__(self, navigator, scrollAxis=0, viewAxis=[0,1], 
                  blockSizes=[128,256,512,1024,2048], 
                  minPixelSize=None, maxPixelSize=None):
         super(ViewBoxWidget,self).__init__()
 
         
 
-        self.viewBox = InfiniteBlockedViewBox(scrollAxis=scrollAxis,
+        self.viewBox = InfiniteBlockedViewBox(navigator=navigator,
+                                              scrollAxis=scrollAxis,
                                               viewAxis=viewAxis,blockSizes=blockSizes,
                                               minPixelSize=minPixelSize, 
                                               maxPixelSize=maxPixelSize)
-
-        self.connectedViewBoxWidgets = []
 
 
         # graphic items
@@ -62,9 +81,6 @@ class ViewBoxWidget(QtGui.QWidget):
     @property
     def sigPixelSizeChanged(self):
         return self.viewBox.sigPixelSizeChanged
-    @property
-    def sigScrolled(self):
-        return self.viewBox.sigScrolled
 
     def setupUI(self):
 
@@ -97,36 +113,12 @@ class ViewBoxWidget(QtGui.QWidget):
         
         # connect pixel size change
         self.sigPixelSizeChanged.connect(self.onPixelSizeChanged)
-        self.sigScrolled.connect(self.onScrolled)
 
 
 
-    def connectOtherViewBoxWidgets(self, others):
-
-        self.connectedViewBoxWidgets = others
-
-        for vbw in self.connectedViewBoxWidgets:
-            vb = vbw.viewBox
-
-            if self.viewBox.viewAxis[0] == vb.scrollAxis:
-                self.viewBox.axis0Line.sigPositionChanged.connect(vb.onExternalAxisLineChanged)
-            elif self.viewBox.viewAxis[1] == vb.scrollAxis:
-                self.viewBox.axis1Line.sigPositionChanged.connect(vb.onExternalAxisLineChanged)
 
 
     def onScrolled(self, scrollCoordinate):
-        #print self.viewBox.scrollAxis,scrollCoordinate
-        # update other viewers
-        for vbw in self.connectedViewBoxWidgets:
-            vb = vbw.viewBox
-            
-            if self.viewBox.scrollAxis == vb.viewAxis[0]:
-                vb.axis0Line.setPos((scrollCoordinate,0))
-            elif self.viewBox.scrollAxis == vb.viewAxis[1]:
-                vb.axis1Line.setValue((0,scrollCoordinate))
-
-
-            #vb.update()
         self.updateText()
     def onPixelSizeChanged(self, ps):
         self.updateText()

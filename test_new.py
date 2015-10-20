@@ -13,12 +13,13 @@ mw.setWindowTitle('pyqtgraph example: ViewBox')
 mw.show()
 mw.resize(800, 600)
 
-[x,y,z] = linked3dViewBoxWidgets()
+
+viewBoxWidgets, navigator = linked3dViewBoxWidgets()
 
 area = DockArea()
 mw.setCentralWidget(area)
 
-for vbw in [x,y,z] :
+for vbw in viewBoxWidgets :
     d = Dock("a dock")
     area.addDock(d)
     d.addWidget(vbw)

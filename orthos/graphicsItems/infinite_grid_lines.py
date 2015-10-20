@@ -70,3 +70,84 @@ class InfiniteGridLines(pg.GraphicsObject):
                         rect = QtCore.QRectF(biX*bz,biY*bz,60,6)
                         #p.drawText(pos,"%d/%d"%(biX,biY))
                         p.drawText(rect, QtCore.Qt.AlignLeft, "%d/%d"%(biX,biY))
+
+
+
+
+
+
+
+class Block2d(object):
+    def __init__(self):
+        pass
+
+
+
+
+class RenderArea(pg.GraphicsObject):
+    def __init__(self, viewBox, blockSize = 512, nBlocks=[6,5]):
+        pg.GraphicsObject.__init__(self)
+        self.viewBox = viewBox
+        self.blockSize = blockSize
+        self.nBlocks = nBlocks
+        self.block2d = [Block2d() for i in range(nBlocks[0]*nBlocks[1])]
+
+        self.visibleBlocks = set()
+    def boundingRect(self):
+        return self.viewBox.viewRect()
+
+
+    def updateVisibleBlocks(self):
+        blockSize = self.blockSize
+        pixSize =  self.viewBox.viewPixelSize()
+
+        vrx = self.viewBox.state['viewRange'][0]
+        vry = self.viewBox.state['viewRange'][1]
+        #print vrx,vry
+        minX = int(vrx[0])/blockSize
+        maxX = int(vrx[1])/blockSize
+        minY = int(vry[0])/blockSize
+        maxY = int(vry[1])/blockSize
+
+
+        
+
+        print "mimadiff",diff
+
+    def paint(self, p, *args):
+        self.updateVisibleBlocks()
+        blockSize = self.blockSize
+        pixSize =  self.viewBox.viewPixelSize()
+
+        vrx = self.viewBox.state['viewRange'][0]
+        vry = self.viewBox.state['viewRange'][1]
+        #print vrx,vry
+        minX = int(vrx[0])
+        maxX = int(vrx[1])
+        minY = int(vry[0])
+        maxY = int(vry[1])
+
+        bMinX = (minX/blockSize)*blockSize
+        bMinY = (minY/blockSize)*blockSize
+
+        bMaxX = (maxX/blockSize)*blockSize
+        bMaxY = (maxX/blockSize)*blockSize
+
+
+        font = p.font()
+        font.setPixelSize(50)
+        p.setFont(font)
+
+        for y in range(self.nBlocks[1]):
+            for x in range(self.nBlocks[0]):
+                
+
+                c=bMinX + x*blockSize,bMinY + y*blockSize
+
+                p.setPen(pg.mkPen(color="w",width=0.2))
+                p.drawRect(c[0],c[1],blockSize,blockSize)
+
+                p.setPen(pg.mkPen(color="w",width=0.2))
+                rect = QtCore.QRectF(c[0],c[1],60,6)
+                p.drawText(c[0],c[1],"%d/%d"%c)
+                #p.drawText(rect, QtCore.Qt.AlignLeft, "%d/%d"%c)
