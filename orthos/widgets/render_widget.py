@@ -16,7 +16,7 @@ class RenderWidget(QtGui.QWidget):
         self.glw = gl.GLViewWidget()
         self.setupUI()
         self.setupGL()
-        self.glw.opts['distance'] = 2000
+        self.glw.opts['distance'] = 3
         self.glw.show()
     def setupUI(self):
         self.mainLayout = QtGui.QHBoxLayout()
@@ -25,18 +25,18 @@ class RenderWidget(QtGui.QWidget):
     
     def setupGL(self):
         
-        shape = self.inputShape.spatialShape
+        shape = self.inputShape
         w = self.glw
 
-        size = QtGui.QVector3D(-1*shape[0],-1*shape[1],1)
+        size = QtGui.QVector3D(-1*shape[0],-1*shape[1],0.01)
         self.xy = gl.GLBoxItem(size=size,color=(0,0,255))
         w.addItem(self.xy)
 
-        size = QtGui.QVector3D(-1*shape[0],1,-1*shape[2])
+        size = QtGui.QVector3D(-1*shape[0],0.01,-1*shape[2])
         self.xz = gl.GLBoxItem(size=size,color=(0,255,0))
         w.addItem(self.xz)
 
-        size = QtGui.QVector3D(1,-1*shape[1],-1*shape[2])
+        size = QtGui.QVector3D(0.01,-1*shape[1],-1*shape[2])
         self.yz = gl.GLBoxItem(size=size,color=(255,0,0))
         w.addItem(self.yz)
 

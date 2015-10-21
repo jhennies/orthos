@@ -5,11 +5,14 @@ import numpy
 #from blocking import *
 from functools import partial
 from  ..graphicsItems.infinite_blocked_view_box import *
-
-
+from  ..layers.layer_base import *
+from render_widget import *
+from time_ctrl_widget import *
+from layers_ctrl_widget import *
 aixsLetters={0:'x',1:'y',2:'z'}
 
 class Navigator(object):
+
     def __init__(self):
         self.planePosition = [0,0,0]
         self.viewBoxWidgets = []
@@ -33,38 +36,56 @@ class Navigator(object):
                     if vb.axis1Line != updatedBy:
                         vb.axis1Line.setPos((0,scrollAxisCoordinate),silent=True)
 
-def linked3dViewBoxWidgets():
+    def onTimeChanged(self, newTime):
+        print "time changed to",newTime
+        for vbw in self.viewBoxWidgets:
+            vbw.viewBox.onTimeChanged(newTime)
+def linked3dViewBoxWidgets(options):
 
+    pixelLayers = PixelLayers()
+    layersCtrl = LayersCtrlWidget()
     navigator = Navigator()
-    x = ViewBoxWidget(navigator=navigator,scrollAxis=0, viewAxis=[1,2])
-    y = ViewBoxWidget(navigator=navigator,scrollAxis=1, viewAxis=[0,2])
-    z = ViewBoxWidget(navigator=navigator,scrollAxis=2, viewAxis=[0,1])
-    navigator.setViewBoxWidgets([x,y,z])
+    x = ViewBoxWidget(navigator=navigator,pixelLayers=pixelLayers,scrollAxis=0, viewAxis=[1,2])
+    y = ViewBoxWidget(navigator=navigator,pixelLayers=pixelLayers,scrollAxis=1, viewAxis=[0,2])
+    z = ViewBoxWidget(navigator=navigator,pixelLayers=pixelLayers,scrollAxis=2, viewAxis=[0,1])
+    widgets = [x,y,z]
+    renderWidget = RenderWidget([1,1,1])
+    navigator.setViewBoxWidgets(widgets)
 
-    return [x,y,z], navigator
+    if options.hasTimeAxis:
+        timeCtrlWidget = TimeCtrlWidget(navigator=navigator)
+    else:
+        timeCtrlWidget = None
+
+    return [x,y,z],renderWidget, navigator,pixelLayers,layersCtrl,timeCtrlWidget
 
 
 class ViewBoxWidget(QtGui.QWidget):
-    def __init__(self, navigator, scrollAxis=0, viewAxis=[0,1], 
+
+
+    def __init__(self, navigator, pixelLayers,
+                 scrollAxis=0, viewAxis=[0,1], 
                  blockSizes=[128,256,512,1024,2048], 
                  minPixelSize=None, maxPixelSize=None):
         super(ViewBoxWidget,self).__init__()
 
-        
+        self.pixelLayers = pixelLayers
 
         self.viewBox = InfiniteBlockedViewBox(navigator=navigator,
+                                              pixelLayers=pixelLayers,
                                               scrollAxis=scrollAxis,
                                               viewAxis=viewAxis,blockSizes=blockSizes,
                                               minPixelSize=minPixelSize, 
                                               maxPixelSize=maxPixelSize)
 
-
+        self.glayout = pg.GraphicsLayout()
         # graphic items
         self.xScale = pg.AxisItem(orientation='bottom', linkView=self.viewBox)
         self.yScale = pg.AxisItem(orientation='left', linkView=self.viewBox)
         self.xScale.setLabel(text=aixsLetters[viewAxis[0]])
         self.yScale.setLabel(text=aixsLetters[viewAxis[1]])
-
+        self.scalesAdded = False
+        self.textAdded = False
         self.textItem1 = pg.LabelItem("text1")
         self.textItem2 = pg.LabelItem("text2")
 
@@ -94,14 +115,16 @@ class ViewBoxWidget(QtGui.QWidget):
 
         # graphics view
         self.gv = pg.GraphicsView()
-        l = pg.GraphicsLayout()
+        l = self.glayout
         
         #l.setHorizontalSpacing(1)
         #l.setVerticalSpacing(1) 
         
         
-
+        self.scalesAdded = True
+        self.textAdded = True
         l.addItem(self.textItem1, 0, 1)
+        
         l.addItem(self.yScale, 1, 0)
         l.addItem(self.viewBox, 1, 1)
         l.addItem(self.xScale, 2, 1)

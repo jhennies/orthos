@@ -7,10 +7,10 @@ from functools import partial
 from  infinite_grid_lines import *
 from  infinite_line import *
 
-def axisColor(axis):
+def axisColor(axis,val=200):
     c=[0,0,0]
-    c[axis] =255
-    return c
+    c[axis] =val
+    return tuple(c)
 
 
 class InfiniteBlockedViewBox(pg.ViewBox):
@@ -24,7 +24,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
     sigPixelSizeChanged = QtCore.Signal(object)
     sigRectChanged = QtCore.Signal(object)
 
-    def __init__(self, navigator,scrollAxis=2, viewAxis=[0,1], blockSizes=[128,256,512,1024,2048], 
+    def __init__(self, navigator,pixelLayers,scrollAxis=2, viewAxis=[0,1], blockSizes=[128,256,512,1024,2048], 
                       minPixelSize=None, maxPixelSize=None):
 
         self.blockSizes = blockSizes
@@ -36,9 +36,11 @@ class InfiniteBlockedViewBox(pg.ViewBox):
 
         super(InfiniteBlockedViewBox,self).__init__(invertY=True,lockAspect=True)
         self.navigator = navigator
+        self.pixelLayers = pixelLayers
         self.scrollAxis = scrollAxis
         self.viewAxis = viewAxis
         self.scrollCoordinate = 0
+        self.timeCoordinate = 0
         
         #self.setLimits(xMin=0,yMin=0)
         self.setRange( xRange=(0,1000),yRange=(0,1000), disableAutoRange=True)
@@ -49,7 +51,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
 
         # buffer pixel size and view rect
         self.viewPixelSizeBuffer = None #self.viewPixelSize()
-        self.viewRectBuffer = None #self.viewRect()
+        self.viewRectBuffer = None #self.state['viewRange']
 
         # connect range changed events
         self.sigXRangeChanged.connect(self.rangeChanged)
@@ -66,17 +68,22 @@ class InfiniteBlockedViewBox(pg.ViewBox):
 
         
         # grid lines
-        #self.gridLines = InfiniteGridLines(self,blockSizes=self.blockSizes)
-        #self.addItem(self.gridLines)
-
+        self.gridLines = InfiniteGridLines(self,blockSizes=self.blockSizes)
+        self.addItem(self.gridLines)
+        self.gridLines.setZValue(14)
+        
         # render area
         self.renderArea = RenderArea(self)
-        self.addItem(self.renderArea)
-        self.sigRectChanged.connect(self.renderArea.boundingRectChanged)
+        #self.addItem(self.renderArea)
+        self.sigRectChanged.connect(self.renderArea.onViewRectChanged)
+        #self.sigScrolled.connect(self.renderArea.onScrolled)
 
         #navigation lines
         self.axis0Line = InfiniteLine(movable=True, angle=90,pen=pg.mkPen(color=axisColor(viewAxis[0]),width=3))
         self.axis1Line = InfiniteLine(movable=True, angle=0 ,pen=pg.mkPen(color=axisColor(viewAxis[1]),width=3))
+        self.axis0Line.setZValue(15)
+        self.axis1Line.setZValue(15)
+
 
         def a0Changed(line):
             v = int(line.value()+0.5)
@@ -130,23 +137,45 @@ class InfiniteBlockedViewBox(pg.ViewBox):
                 self.sigPixelSizeChanged.emit(self.viewPixelSizeBuffer)
 
         if self.viewRectBuffer is None:
-            self.viewRectBuffer = self.viewRect()
+            self.viewRectBuffer = self.state['viewRange']
             self.sigRectChanged.emit(self.viewRectBuffer)
         else:
-            vr = self.viewRect()
-            if vr != self.viewPixelSizeBuffer:
-                #print "changed rect"
+            vr = self.state['viewRange']
+            vrr = numpy.round(vr,5)
+            vrbr = numpy.round(self.viewPixelSizeBuffer,5)
+            if numpy.allclose(vrr,vrbr) == False:
                 self.viewRectBuffer =vr
                 self.sigRectChanged.emit(self.viewRectBuffer)
 
 
+    def integralViewBounds(self, noZeroMin=False):
+        vrx = numpy.round(self.state['viewRange'][0],0).astype('int64')
+        vry = numpy.round(self.state['viewRange'][1],0).astype('int64')
+        minCoord = numpy.array([vrx[0],vry[0]])
+        maxCoord = numpy.array([vrx[1],vry[1]])
+        if noZeroMin:
+            minCoord[0] = max(0,minCoord[0])
+            minCoord[1] = max(0,minCoord[1])
+        return minCoord, maxCoord
+
+    def make3DCoordinate(self, coord, scrollOffset=0):
+        coord3d = [0,0,0]
+        coord3d[self.scrollAxis] = self.scrollCoordinate + scrollOffset
+        coord3d[self.viewAxis[0]] = coord[0]
+        coord3d[self.viewAxis[1]] = coord[1]
+        return coord3d
+
     def onPixelSizeChanged(self, pz):
         self.bestBlockIndex = self.findBestBlockIndex()
-        print "best index",self.bestBlockIndex
+        #print "best index",self.bestBlockIndex
     
     def changeScrollCoordinate(self, newScrollCoordinate):
         self.scrollCoordinate = newScrollCoordinate
+        self.renderArea.onScrolled()
 
+    def onTimeChanged(self, newTime):
+        self.timeCoordinate = newTime
+        self.renderArea.onTimeChanged(newTime)
     def rectChanged(self, vr):
         #print "rect changed"
         pass
@@ -189,8 +218,11 @@ class InfiniteBlockedViewBox(pg.ViewBox):
                 d = 1*f
             else:
                 d =-1*f
-            self.scrollCoordinate +=d
-            self.navigator.changedPlane(self.scrollAxis,self.scrollCoordinate)
+            newCoord = self.scrollCoordinate + d
+            newCoord = max(0,newCoord)
+            if newCoord != self.scrollCoordinate:
+                self.scrollCoordinate = newCoord
+                self.navigator.changedPlane(self.scrollAxis,self.scrollCoordinate)
 
 
 if __name__ == "__main__":

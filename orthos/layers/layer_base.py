@@ -1,16 +1,7 @@
 from abc import abstractmethod
 from pyqtgraph.Qt import QtGui, QtCore
-
-
-class DataSourceBase(object):
-    def __init__(self):
-        pass
-
-class PixelDataSourceBase(DataSourceBase):
-    def __init__(self):
-        pass
-
-
+from collections import OrderedDict
+from  ..widgets.layer_base_ctrl_widget import *
 
 
 # request which can be send to a layer
@@ -38,7 +29,7 @@ class Arbitrary2dBlockRequest(LayerRequestBase):
 
 
 
-class LayerBase(object):
+class LayerBase(QtCore.QObject):
 
 
     sigAlphaChanged = QtCore.Signal(object)
@@ -52,7 +43,7 @@ class LayerBase(object):
     def __init__(self, name, layerZValue, alpha=1.0, visible=True, 
                  spatialBounds=(None,None), 
                  timeBounds=(None,None),priority=1):
-
+        super(LayerBase, self).__init__()
         self.name_ = name
         self.layerZValue_ = layerZValue
         self.alpha_  = alpha
@@ -61,6 +52,8 @@ class LayerBase(object):
         self.timeBounds_ = timeBounds
         self.priority_ = priority
 
+    def makeCtrlWidget(self):
+        return LayerBaseCtrlWidget(layer=self)
 
     def setName(self, name):
         self.name_ = name
@@ -69,14 +62,17 @@ class LayerBase(object):
         return self.name_
 
     def setVisible(self, visible):
-        self.visible_ = visible
-        self.sigVisibilityChanged.emit(self.visible_)
+        if visible != self.visible_:
+            self.visible_ = visible
+            self.sigVisibilityChanged.emit(self.visible_)
     def visible(self):
         return self.visible_
 
     def setAlpha(self, alpha):
-        self.alpha_ = alpha
-        self.sigAlphaChanged.emit(self.alpha_)
+        if abs(self.alpha_ - alpha) >= 0.00001:
+            self.alpha_ = alpha
+            self.sigAlphaChanged.emit(self.alpha_)
+
     def alpha(self):
         return self.alpha_
 
@@ -113,26 +109,53 @@ class PixelLayerBase(LayerBase):
                            visible=visible,spatialBounds=spatialBounds, 
                            timeBounds=timeBounds,priority=priority)
 
-class H5PixelLayer(PixelLayerBase):
-    def __init__(self, dset, name):
 
-        self.dset = dset
-        self.shape = self.dset.shape
+
+class GrayscaleLayer(PixelLayerBase):
+    def __init__(self,name, dataSource, mult=None):
+        self.mult = mult
+        self.dataSource = dataSource
+        self.shape = self.dataSource.shape
         spatialBounds=((0,0,0), self.shape)
         timeBounds=(0,1)
-        super(H5PixelLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
+        super(GrayscaleLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
 
-    def request3Dblock(self, slicing):
+    def request3DBlock(self, spatialSlicing, time):
         #print slicing
-        for i,s in enumerate(slicing):
+        for i,s in enumerate(spatialSlicing):
             if s.start < 0 or s.stop>self.shape[i]:
                 return None
-        return self.dset[tuple(slicing)]
+        data = self.dataSource[tuple(spatialSlicing)]
+        if self.mult is not None:
+            data*=self.mult
+        data +=time
+        return data
+
 
 class PixelSegmentationEdgeLayerBase(object):
     def __init__(self):
         pass
 
+
+
+
+class PixelLayers(QtCore.QObject):
+
+    
+    sigPixelLayerAdded  = QtCore.Signal(object)
+    sigPixelLayerRemoved  = QtCore.Signal(object)
+
+    def __init__(self):
+        super(PixelLayers,self).__init__()
+        self.layers = OrderedDict()
+
+    def addLayer(self, layer):
+        self.layers[layer.name()] = layer
+        self.sigPixelLayerAdded.emit(layer)
+
+    def removeLayer(self, layer):
+        self.layers.pop(layer.name())
+        self.sigPixelLayerRemoved.emit(layer)
 
 
 
