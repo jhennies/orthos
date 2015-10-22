@@ -4,9 +4,9 @@ import vigra
 import numpy
 #from blocking import *
 from functools import partial
-from  infinite_grid_lines import *
-from  infinite_line import *
-from view_box.tiling import *
+from  ..infinite_grid_lines import *
+from  ..infinite_line import *
+
 def axisColor(axis,val=200):
     c=[0,0,0]
     c[axis] =val
@@ -179,20 +179,20 @@ class InfiniteBlockedViewBox(pg.ViewBox):
     def rectChanged(self, vr):
         #print "rect changed"
         pass
+        #vr = numpy.round(self.viewRange(),0).astype('int64')
+        #vr /= self.blockSizes[0]
+
+        #minBlockCoord = vr[:,0]
+        #maxBlockCoord = vr[:,1]
+
+        #print "min:",minBlockCoord
+        #print "max:",maxBlockCoord
 
     # events from user
     def mouseDragEvent(self, ev, axis=None):
         kmods = ev.modifiers()
         if kmods & pg.QtCore.Qt.ControlModifier and ev.button() == QtCore.Qt.LeftButton:
             super(InfiniteBlockedViewBox,self).mouseDragEvent(ev, axis)
-
-    def mouseClickEvent(self, ev):
-        if ev.button() ==  QtCore.Qt.MiddleButton and ev.double():
-            pos = self.mapToView(ev.pos())
-            pos = pos.x(),pos.y()
-            if int(pos[0]) >= 0 and int(pos[1]) >=0:
-                self.navigator.changedPlane(self.viewAxis[0],int(pos[0]))
-                self.navigator.changedPlane(self.viewAxis[1],int(pos[1]))
 
     def wheelEvent(self, ev, axis=None):     
         f = 1

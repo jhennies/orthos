@@ -1,8 +1,8 @@
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
 import numpy
-
 from tiling_image_item import *
+from view_box import VisibleBlocks
 
 def make3dSlicing(begin,end):
     slicing = []
@@ -10,10 +10,7 @@ def make3dSlicing(begin,end):
         slicing.append(slice(b,e))
     return slicing
 
-def yield2d(shape):
-    for x in range(shape[0]):
-        for y in range(shape[1]):
-            yield x,y
+
 
 class InfiniteGridLines(pg.GraphicsObject):
     def __init__(self, viewBox,blockSizes):
@@ -86,6 +83,11 @@ class InfiniteGridLines(pg.GraphicsObject):
 
 
 
+
+
+
+
+
 class BlockImageItems(object):
 
     def __init__(self,renderArea):
@@ -121,74 +123,24 @@ class BlockImageItems(object):
 
     def blockAppear(self, spatialSlicing, time, blockPos):
         #print "block appeared",blockPos
-        try:
-            for name,layer in self.pixelLayers.layers.iteritems():
-                if name in self.imgItemDict:
-                    imgItem = self.imgItemDict[name]
-                    res = layer.request3DBlock(spatialSlicing=spatialSlicing, time=time)
-                    imgItem.setPos(*blockPos)
-                    if res is not None:
-                        #print "has data"
-                        res = res.squeeze()
-                        imgItem.setImage(res)
-                        imgItem.setTilingVisible(True)
-                        #imgItem.update()
-                        imgItem.setLevels([0,255])
-                    else:
-                        pass#print "and has no data"
-        except KeyError as e:
-            
-            print e,e,e,e,e
-            print e
-            import sys
-            sys.exit()
+
+        for name,layer in self.pixelLayers.layers.iteritems():
+            if name in self.imgItemDict:
+                imgItem = self.imgItemDict[name]
+                res = layer.request3DBlock(spatialSlicing=spatialSlicing, time=time)
+                imgItem.setPos(*blockPos)
+                if res is not None:
+                    #print "has data"
+                    res = res.squeeze()
+                    imgItem.setImage(res)
+                    imgItem.setTilingVisible(True)
+                    #imgItem.update()
+                    imgItem.setLevels([0,255])
+                else:
+                    pass#print "and has no data"
 
 
-class VisibleBlocks(QtCore.QObject):
 
-    sigBlocksAppeared  = QtCore.Signal(object)
-    sigBlocksDisappeared  = QtCore.Signal(object)
-
-    def __init__(self, viewBox, blockSize, nBlocks):
-        super(VisibleBlocks,self).__init__()
-        self.viewBox = viewBox
-        self.blockSize = blockSize
-        self.nBlocks = nBlocks
-        self.nTotalBlocks = nBlocks[0]*nBlocks[1]
-        self.visibleBlocks = set()
-
-    def getBlockCoords(self, minCoord, maxCoord):
-        startBlockCoord = minCoord/self.blockSize
-        stopBlockCoord= maxCoord/self.blockSize + 1
-        for i in range(2):
-            stopBlockCoord[i] = min(stopBlockCoord[i],startBlockCoord[i]+self.nBlocks[i])
-        return startBlockCoord, stopBlockCoord
-
-    def onViewRectChanged(self):
-        blockSize = self.blockSize
-        pixSize =  self.viewBox.viewPixelSize()
-        minCoord, maxCoord = self.viewBox.integralViewBounds(noZeroMin=True)
-        #print "       MIN MAX",minCoord,maxCoord
-        if maxCoord[0]<=0 or maxCoord[1]<=0:
-            d =  set(self.visibleBlocks)
-            self.visibleBlocks.clear()
-            self.sigBlocksDisappeared.emit(d)
-        else:
-            startBC, stopBC = self.getBlockCoords(minCoord,maxCoord)
-            nBlocks  = stopBC - startBC
-            newVisibleBlocks = set()
-            for bix,biy in yield2d(nBlocks):
-                localBC  = bix,biy
-                globalBC = bix+startBC[0],biy+startBC[1]
-                newVisibleBlocks.add(globalBC)
-
-            dissapeared = self.visibleBlocks - newVisibleBlocks
-            appeared = newVisibleBlocks - self.visibleBlocks
-            if(len(dissapeared)>0):
-                self.sigBlocksDisappeared.emit(dissapeared)
-            if(len(appeared)>0):
-                self.sigBlocksAppeared.emit(appeared)
-            self.visibleBlocks = newVisibleBlocks
 
 
 
@@ -215,9 +167,14 @@ class RenderArea(object):
         self.usedImageItems = set()
 
         self.imageItems = [BlockImageItems(renderArea=self) for i in range(self.visibleBlocks.nTotalBlocks)]
+        #self.tileItemGroups = [TileItemGroup() for i in range(self.visibleBlocks.nTotalBlocks)]
+
         for index,imageItem in enumerate(self.imageItems):
             imageItem._index = index
             self.freeImageItems.add(index)
+
+            #self.viewBox.addItem(self.tileItemGroups[index])
+
         self.rawDataLayer = None
 
 
