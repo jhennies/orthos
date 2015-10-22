@@ -147,7 +147,7 @@ class BlockImageItems(object):
 class RenderArea(object):
 
 
-    def __init__(self, viewBox, blockSize = 256, nBlocks=[10,10]):
+    def __init__(self, viewBox, blockSize = 500, nBlocks=[4,4]):
         self.blockSize = blockSize
         self.pixelLayers = viewBox.pixelLayers
 

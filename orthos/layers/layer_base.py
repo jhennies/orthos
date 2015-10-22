@@ -125,10 +125,10 @@ class GrayscaleLayer(PixelLayerBase):
         for i,s in enumerate(spatialSlicing):
             if s.start < 0 or s.stop>self.shape[i]:
                 return None
-        data = self.dataSource[tuple(spatialSlicing)]
-        if self.mult is not None:
-            data*=self.mult
-        data +=time
+        data = self.dataSource[tuple(spatialSlicing)].copy()
+        #if self.mult is not None:
+        #    data*=self.mult
+        ##data +=time
         return data
 
 
