@@ -4,16 +4,22 @@ import vigra
 import numpy
 #from blocking import *
 from functools import partial
-from  ..graphicsItems.infinite_blocked_view_box import *
+from   ..graphicsItems import linked_view_box
 from  ..layers.layer_base import *
 from render_widget import *
 from time_ctrl_widget import *
 from layers_ctrl_widget import *
+from ..blocking import *
 aixsLetters={0:'x',1:'y',2:'z'}
+
+
 
 class Navigator(object):
 
-    def __init__(self):
+    def __init__(self, spatialShape, nTimePoints):
+        self.mlBlocking = MultiLevelBlocking(spatialShape=spatialShape)
+        self.spatialShape = spatialShape
+        self.nTimePoints = nTimePoints
         self.planePosition = [0,0,0]
         self.viewBoxWidgets = []
 
@@ -40,11 +46,11 @@ class Navigator(object):
         print "time changed to",newTime
         for vbw in self.viewBoxWidgets:
             vbw.viewBox.onTimeChanged(newTime)
-def linked3dViewBoxWidgets(options):
+def linked3dViewBoxWidgets(spatialShape, nTimePoints, options):
 
     pixelLayers = PixelLayers()
     layersCtrl = LayersCtrlWidget()
-    navigator = Navigator()
+    navigator = Navigator(spatialShape=spatialShape, nTimePoints=nTimePoints)
     x = ViewBoxWidget(navigator=navigator,pixelLayers=pixelLayers,scrollAxis=0, viewAxis=[1,2])
     y = ViewBoxWidget(navigator=navigator,pixelLayers=pixelLayers,scrollAxis=1, viewAxis=[0,2])
     z = ViewBoxWidget(navigator=navigator,pixelLayers=pixelLayers,scrollAxis=2, viewAxis=[0,1])
@@ -71,7 +77,7 @@ class ViewBoxWidget(QtGui.QWidget):
 
         self.pixelLayers = pixelLayers
 
-        self.viewBox = InfiniteBlockedViewBox(navigator=navigator,
+        self.viewBox = linked_view_box.InfiniteBlockedViewBox(navigator=navigator,
                                               pixelLayers=pixelLayers,
                                               scrollAxis=scrollAxis,
                                               viewAxis=viewAxis,blockSizes=blockSizes,

@@ -10,6 +10,11 @@ from orthos.layers import *
 from pyqtgraph.dockarea import *
 from pyqtgraph.dockarea import *
 
+def axisColor(axis,val=200):
+    c=[0,0,0]
+    c[axis] =val
+    return tuple(c)
+
 
 class LayerViewerOptions(object):
     def __init__(self):
@@ -30,11 +35,12 @@ class LayerViewerOptions(object):
 
 
 class LayerViewerWidget(QtGui.QWidget):
-    def __init__(self,options):
+    def __init__(self,spatialShape, nTimePoints=None,options=LayerViewerOptions()):
         super(LayerViewerWidget,self).__init__()
-
+        self.spatialShape = spatialShape
+        self.nTimePoints = nTimePoints
         self.options = options
-        res = linked3dViewBoxWidgets(options)
+        res = linked3dViewBoxWidgets(spatialShape=spatialShape,nTimePoints=nTimePoints,options=options)
         self.viewBoxWidgets = res[0]
         self.renderWidget = res[1]
         self.navigator = res[2]

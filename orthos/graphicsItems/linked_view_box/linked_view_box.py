@@ -4,17 +4,20 @@ import vigra
 import numpy
 #from blocking import *
 from functools import partial
+from  .. import *
+from  ..infinite_line import *
 from  infinite_grid_lines import *
-from  infinite_line import *
-from view_box.tiling import *
+from tile_item_group import *
+
 def axisColor(axis,val=200):
     c=[0,0,0]
     c[axis] =val
     return tuple(c)
 
 
-class InfiniteBlockedViewBox(pg.ViewBox):
 
+
+class InfiniteBlockedViewBox(pg.ViewBox):
 
     #sigScrolled = QtCore.Signal(object)                         
     sigBlocksAppeared = QtCore.Signal(object)
@@ -42,8 +45,16 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         self.scrollCoordinate = 0
         self.timeCoordinate = 0
         
-        #self.setLimits(xMin=0,yMin=0)
-        self.setRange( xRange=(0,1000),yRange=(0,1000), disableAutoRange=True)
+        sShape = navigator.spatialShape
+        viewSpatialShape = (sShape[self.viewAxis[0]], sShape[self.viewAxis[1]] )
+        self.setRange(xRange=(0,100),yRange=(0,100))
+        #self.setLimits(
+        #xMin=-1*viewSpatialShape[0],xMax=2*viewSpatialShape[0], 
+        #yMin=-1*viewSpatialShape[1],yMax=2*viewSpatialShape[1],
+        #minXRange=100,minYRange=100,
+        #maxXRange=viewSpatialShape[0],
+        #maxYRange=viewSpatialShape[1])
+
         self.setAspectLocked(True)
         self.setMenuEnabled(False)
         self.invertY(True)
@@ -68,8 +79,8 @@ class InfiniteBlockedViewBox(pg.ViewBox):
 
         
         # grid lines
-        self.gridLines = InfiniteGridLines(self,blockSizes=self.blockSizes)
-        self.addItem(self.gridLines)
+        self.gridLines = InfiniteGridLines(self)
+        self.addItem(self.gridLines,ignoreBounds=False)
         self.gridLines.setZValue(14)
         
         # render area
@@ -78,6 +89,10 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         self.sigRectChanged.connect(self.renderArea.onViewRectChanged)
         #self.sigScrolled.connect(self.renderArea.onScrolled)
 
+
+        # new better tiling
+        self.tileGrid = TileGrid(self,0,tileGridShape=(5,5))
+        self.addItem(self.tileGrid)
         #navigation lines
         self.axis0Line = InfiniteLine(movable=True, angle=90,pen=pg.mkPen(color=axisColor(viewAxis[0]),width=3))
         self.axis1Line = InfiniteLine(movable=True, angle=0 ,pen=pg.mkPen(color=axisColor(viewAxis[1]),width=3))
@@ -101,6 +116,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
 
         self.bestBlockIndex = None 
 
+        #self.rangeChanged()
 
 
 
@@ -127,26 +143,28 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         #print "rect buffer",self.viewRectBuffer
         #print "ps   buffer",self.viewPixelSizeBuffer
 
-        if self.viewPixelSizeBuffer is None:
-            self.viewPixelSizeBuffer = [ round(x,8) for x in self.viewPixelSize()]
-            self.sigPixelSizeChanged.emit(self.viewPixelSizeBuffer)
-        else:
-            pz = [ round(x,8) for x in self.viewPixelSize()]
-            if pz != self.viewPixelSizeBuffer:
-                self.viewPixelSizeBuffer = pz
+        try:
+            if self.viewPixelSizeBuffer is None:
+                self.viewPixelSizeBuffer = [ round(x,8) for x in self.viewPixelSize()]
                 self.sigPixelSizeChanged.emit(self.viewPixelSizeBuffer)
+            else:
+                pz = [ round(x,8) for x in self.viewPixelSize()]
+                if pz != self.viewPixelSizeBuffer:
+                    self.viewPixelSizeBuffer = pz
+                    self.sigPixelSizeChanged.emit(self.viewPixelSizeBuffer)
 
-        if self.viewRectBuffer is None:
-            self.viewRectBuffer = self.state['viewRange']
-            self.sigRectChanged.emit(self.viewRectBuffer)
-        else:
-            vr = self.state['viewRange']
-            vrr = numpy.round(vr,5)
-            vrbr = numpy.round(self.viewPixelSizeBuffer,5)
-            if numpy.allclose(vrr,vrbr) == False:
-                self.viewRectBuffer =vr
+            if self.viewRectBuffer is None:
+                self.viewRectBuffer = self.state['viewRange']
                 self.sigRectChanged.emit(self.viewRectBuffer)
-
+            else:
+                vr = self.state['viewRange']
+                vrr = numpy.round(vr,5)
+                vrbr = numpy.round(self.viewPixelSizeBuffer,5)
+                if numpy.allclose(vrr,vrbr) == False:
+                    self.viewRectBuffer =vr
+                    self.sigRectChanged.emit(self.viewRectBuffer)
+        except:
+            pass
 
     def integralViewBounds(self, noZeroMin=False):
         vrx = numpy.round(self.state['viewRange'][0],0).astype('int64')
@@ -179,20 +197,20 @@ class InfiniteBlockedViewBox(pg.ViewBox):
     def rectChanged(self, vr):
         #print "rect changed"
         pass
+        #vr = numpy.round(self.viewRange(),0).astype('int64')
+        #vr /= self.blockSizes[0]
+
+        #minBlockCoord = vr[:,0]
+        #maxBlockCoord = vr[:,1]
+
+        #print "min:",minBlockCoord
+        #print "max:",maxBlockCoord
 
     # events from user
     def mouseDragEvent(self, ev, axis=None):
         kmods = ev.modifiers()
         if kmods & pg.QtCore.Qt.ControlModifier and ev.button() == QtCore.Qt.LeftButton:
             super(InfiniteBlockedViewBox,self).mouseDragEvent(ev, axis)
-
-    def mouseClickEvent(self, ev):
-        if ev.button() ==  QtCore.Qt.MiddleButton and ev.double():
-            pos = self.mapToView(ev.pos())
-            pos = pos.x(),pos.y()
-            if int(pos[0]) >= 0 and int(pos[1]) >=0:
-                self.navigator.changedPlane(self.viewAxis[0],int(pos[0]))
-                self.navigator.changedPlane(self.viewAxis[1],int(pos[1]))
 
     def wheelEvent(self, ev, axis=None):     
         f = 1

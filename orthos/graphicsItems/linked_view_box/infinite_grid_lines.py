@@ -1,8 +1,8 @@
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
 import numpy
-from tiling_image_item import *
-from view_box import VisibleBlocks
+from ..tiling_image_item import *
+from tiling import VisibleBlocks
 
 def make3dSlicing(begin,end):
     slicing = []
@@ -12,74 +12,99 @@ def make3dSlicing(begin,end):
 
 
 
+
 class InfiniteGridLines(pg.GraphicsObject):
-    def __init__(self, viewBox,blockSizes):
+    def __init__(self, viewBox):
         pg.GraphicsObject.__init__(self)
         self.viewBox = viewBox
-        self.blockSizes = [64,128,256,512, 1024, 2048]
-        self.pixelSize =  [1,2,4,8,16]
-        self.blockColors = numpy.zeros(shape=(len(self.blockSizes), 3))
+        self.mlBlocking = self.viewBox.navigator.mlBlocking
 
-        fLen = float(len(self.blockSizes))
-        for bi in range(len(self.blockSizes)):
-            r = 255.0
-            b = (fLen-bi)/fLen * 255.0
-            g = 255.0 - b
+        self.initialzie()
+
+    def initialzie(self):
+
+
+        self.shape2d = self.mlBlocking.shape2d(self.viewBox.scrollAxis)
+        self.blockColors = numpy.zeros(shape=(self.mlBlocking.nBlockings, 3))
+
+        fLen = float(self.mlBlocking.nBlockings)
+        for bi in range(self.mlBlocking.nBlockings):
+            r = 50.0
+            b = 20 + (fLen-bi)/fLen * 180.0
+            g = 50.0 
             self.blockColors[bi, :] = r,g,b
     def boundingRect(self):
-        return self.viewBox.viewRect()
+        return QtCore.QRectF(0,0,self.shape2d[0],self.shape2d[1])
     def paint(self, p, *args):
 
-        pixSize =  self.viewBox.viewPixelSize()
 
         vrx = self.viewBox.state['viewRange'][0]
         vry = self.viewBox.state['viewRange'][1]
+        minX = max(int(vrx[0]),0)
+        minY = max(int(vry[0]),0)
+        maxX = min(int(vrx[1]),self.shape2d[0])
+        maxY = min(int(vry[1]),self.shape2d[1])
 
-        #print vrx,vry
-        minX = int(vrx[0])
-        maxX = int(vrx[1])
-        minY = int(vry[0])
-        maxY = int(vry[1])
+        mlB = self.mlBlocking
 
-        usableSizes = []
-        for bi,bz in enumerate(self.blockSizes):
-            if pixSize[0] > bz/16:
-                pass
-            else:
-                usableSizes.append((bi,bz))
+        for blockingIndex in range(mlB.nBlockings):
 
-        if len(usableSizes) ==0 :
-            usableSizes.append((bi,self.blockSizes[-1]))
+            w = float(blockingIndex+1)*2.0
+            c = self.blockColors[blockingIndex,:]
+            p.setPen(pg.mkPen(color=c,width=w ))
 
-        for bi,bz in usableSizes:
+            bs2d = mlB.blockShape2d(blockingIndex, self.viewBox.scrollAxis)
+
+            # draw horizonal lines
+            minBlockC = minX/bs2d[0],minY/bs2d[1]
+            maxBlockC = maxX/bs2d[0] + 2,maxY/bs2d[1] +2
+
+
+            for bcx in range(minBlockC[0],maxBlockC[0]):
+                x = min(bcx*bs2d[0],self.shape2d[0])
+                p.drawLine(x,minY,x,maxY )
+            for bcy in range(minBlockC[1],maxBlockC[1]):
+                y = min(bcy*bs2d[1],self.shape2d[1])
+                p.drawLine(minX,y,maxX,y )
+
+
+        #usableSizes = []
+        #for bi,bz in enumerate(self.blockSizes):
+        #    if pixSize[0] > bz/16:
+        #        pass
+        #    else:
+        #        usableSizes.append((bi,bz))
+        #if len(usableSizes) ==0 :
+        #    usableSizes.append((bi,self.blockSizes[-1]))
+        #for bi,bz in usableSizes:
 
             #print "PX",pixSize[0]
-            if pixSize[0] > bz/16:
-                pass
-            else:
-                bMinX = minX/bz
-                bMaxX = maxX/bz
-                bMinY = minY/bz
-                bMaxY = maxY/bz
-                #print bMinX,bMaxX
-                w = float(bz)/128.0
-                p.setPen(pg.mkPen(color=self.blockColors[bi,:],width=(bi+1)*0.1) )
-                for biX in range(bMinX, bMaxX+1):
-                    p.drawLine(biX*bz,minY, biX*bz,maxY )
-                for biY in range(bMinY, bMaxY+1):
-                    p.drawLine(minX,biY*bz, maxX, biY*bz)
+            #if pixSize[0] > bz/16:
+            #    pass
+            #else:
+            #    bMinX = minX/bz
+            #    bMaxX = maxX/bz
+            #    bMinY = minY/bz
+            #    bMaxY = maxY/bz
+            #    #print bMinX,bMaxX
+            #    w = float(bz)/128.0
+            #    p.setPen(pg.mkPen(color=self.blockColors[bi,:],width=(bi+1)*0.1) )
+            #    for biX in range(bMinX, bMaxX+1):
+            #        p.drawLine(biX*bz,minY, biX*bz,maxY )
+            #    for biY in range(bMinY, bMaxY+1):
+            #        p.drawLine(minX,biY*bz, maxX, biY*bz)
 
-            if bz ==64:
+            #if bz ==64:
 
-                font = p.font()
-                font.setPixelSize(5)
-                p.setFont(font)
-                p.setPen(pg.mkPen(color="w",width=0.2))
-                for biX in range(bMinX, bMaxX+1):
-                    for biY in range(bMinY, bMaxY+1):
-                        rect = QtCore.QRectF(biX*bz,biY*bz,60,6)
-                        #p.drawText(pos,"%d/%d"%(biX,biY))
-                        p.drawText(rect, QtCore.Qt.AlignLeft, "%d/%d"%(biX,biY))
+            #    font = p.font()
+            #    font.setPixelSize(5)
+            #    p.setFont(font)
+            #    p.setPen(pg.mkPen(color="w",width=0.2))
+            #    for biX in range(bMinX, bMaxX+1):
+            #        for biY in range(bMinY, bMaxY+1):
+            #            rect = QtCore.QRectF(biX*bz,biY*bz,60,6)
+            #            #p.drawText(pos,"%d/%d"%(biX,biY))
+            #            p.drawText(rect, QtCore.Qt.AlignLeft, "%d/%d"%(biX,biY))
 
 
 
@@ -147,7 +172,7 @@ class BlockImageItems(object):
 class RenderArea(object):
 
 
-    def __init__(self, viewBox, blockSize = 256, nBlocks=[10,10]):
+    def __init__(self, viewBox, blockSize = 200, nBlocks=[10,10]):
         self.blockSize = blockSize
         self.pixelLayers = viewBox.pixelLayers
 
