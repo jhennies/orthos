@@ -60,11 +60,11 @@ class LayerViewerWidget(QtGui.QWidget):
         for vbw in self.viewBoxWidgets :
             dockColor = axisColor(vbw.viewBox.scrollAxis,val=200)
             viewerName = aixsLetters[vbw.viewBox.viewAxis[0]] +  aixsLetters[vbw.viewBox.viewAxis[1]]
-            d = ColorDock(name=viewerName,color=dockColor,closable=False)
+            d = ColorDock(name=viewerName,color=dockColor)
             self.orthoViewsDocks.append(d)
             d.addWidget(vbw)
 
-        self.renderDock = ColorDock(name=viewerName,color=(200,200,200),closable=False)
+        self.renderDock = ColorDock(name=viewerName,color=(200,200,200))
         self.renderDock.addWidget(self.renderWidget)
 
 
