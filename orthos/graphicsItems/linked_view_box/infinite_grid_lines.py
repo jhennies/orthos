@@ -4,6 +4,7 @@ import numpy
 from ..tiling_image_item import *
 from tiling import VisibleBlocks
 
+
 def make3dSlicing(begin,end):
     slicing = []
     for b,e in zip(begin, end):
@@ -170,7 +171,7 @@ class BlockImageItems(object):
 
 
 class RenderArea(object):
-    def __init__(self, viewBox, blockSize = 200, nBlocks=[10,10]):
+    def __init__(self, viewBox, blockSize = 400, nBlocks=[10,10]):
         self.blockSize = blockSize
         self.pixelLayers = viewBox.pixelLayers
 

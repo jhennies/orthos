@@ -106,8 +106,8 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         def a1Changed(line):
             v = int(line.value()+0.5)
             self.navigator.changedPlane(self.viewAxis[1],v)
-        self.axis0Line.sigPositionChanged.connect(a0Changed)
-        self.axis1Line.sigPositionChanged.connect(a1Changed)
+        self.axis0Line.sigPositionChangeFinished.connect(a0Changed)
+        self.axis1Line.sigPositionChangeFinished.connect(a1Changed)
 
 
         self.addItem(self.axis0Line, ignoreBounds=True)
