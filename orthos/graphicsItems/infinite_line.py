@@ -25,7 +25,7 @@ class InfiniteLine(pg.InfiniteLine):
                 newPos = [0, pos]
             else:
                 raise Exception("Must specify 2D coordinate for non-orthogonal lines.")
-            
+        newPos = list(newPos)
         ## check bounds (only works for orthogonal lines)
         if self.angle == 90:
             if self.maxRange[0] is not None:    

@@ -54,18 +54,13 @@ class Navigator(object):
                 if vb.scrollAxis not in scrollAxis:
                     continue
                 else:
-                    vrX = vb.viewRange()[0]
-                    vrY = vb.viewRange()[1]
-                    
-                    rX = float(vrX[1] - vrX[0]) / 2.0
-                    rY = float(vrY[1] - vrY[0]) / 2.0
-
+                    vrX,vrY = vb.viewRange()
+                    rX = (vrX[1] - vrX[0]) / 2.0
+                    rY = (vrY[1] - vrY[0]) / 2.0
                     mX =  vrX[0] + rX
                     mY =  vrY[0] + rY
-                    
                     sX = float(self.planePosition[vb.viewAxis[0]]) 
                     sY = float(self.planePosition[vb.viewAxis[1]]) 
-
                     vb.translateBy(t=(sX-mX,sY-mY))
 
                     #vb.setRange(xRange=(sX,sX+2.0*rX))

@@ -91,8 +91,10 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         self.tileGrid = TileGrid(self,0,tileGridShape=(10,10))
         self.addItem(self.tileGrid)
         #navigation lines
-        self.axis0Line = InfiniteLine(movable=True, angle=90,pen=pg.mkPen(color=axisColor(viewAxis[0]),width=3))
-        self.axis1Line = InfiniteLine(movable=True, angle=0 ,pen=pg.mkPen(color=axisColor(viewAxis[1]),width=3))
+        self.axis0Line = InfiniteLine(movable=True, angle=90,pen=pg.mkPen(color=axisColor(viewAxis[0]),width=3),
+                                      bounds=[0,self.viewSpatialShape[0]-1]) 
+        self.axis1Line = InfiniteLine(movable=True, angle=0 ,pen=pg.mkPen(color=axisColor(viewAxis[1]),width=3),
+                                      bounds=[0,self.viewSpatialShape[1]-1])
         self.axis0Line.setZValue(15)
         self.axis1Line.setZValue(15)
 
@@ -242,6 +244,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         s2d = self.viewSpatialShape
         if pos[0] >=0.0 and pos[0]<s2d[0] and  pos[1] >=0.0 and pos[1]<s2d[0] :
             if ev.button() ==QtCore.Qt.MiddleButton and ev.double():
+                ev.accept()
                 self.navigator.change2PlanesByDoubleClick(self.viewAxis, (int(pos[0]), int(pos[1]) ) )
                 
 
