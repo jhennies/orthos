@@ -42,6 +42,34 @@ class Navigator(object):
                     if vb.axis1Line != updatedBy:
                         vb.axis1Line.setPos((0,scrollAxisCoordinate),silent=True)
 
+
+    def change2PlanesByDoubleClick(self, scrollAxis, scrollAxisCoordinates):
+        
+        clickingViewBoxScrollAxis =  next(iter(set([0,1,2]) - set(scrollAxis)))
+        for sa, sc in zip(scrollAxis, scrollAxisCoordinates):
+            self.changedPlane(sa,sc)
+
+            for vbw in self.viewBoxWidgets:
+                vb = vbw.viewBox
+                if vb.scrollAxis not in scrollAxis:
+                    continue
+                else:
+                    vrX = vb.viewRange()[0]
+                    vrY = vb.viewRange()[1]
+                    
+                    rX = float(vrX[1] - vrX[0]) / 2.0
+                    rY = float(vrY[1] - vrY[0]) / 2.0
+
+                    mX =  vrX[0] + rX
+                    mY =  vrY[0] + rY
+                    
+                    sX = float(self.planePosition[vb.viewAxis[0]]) 
+                    sY = float(self.planePosition[vb.viewAxis[1]]) 
+
+                    vb.translateBy(t=(sX-mX,sY-mY))
+
+                    #vb.setRange(xRange=(sX,sX+2.0*rX))
+                    #vb.setRange(yRange=(sY,sY+2.0*rY))
     def onTimeChanged(self, newTime):
         print "time changed to",newTime
         for vbw in self.viewBoxWidgets:

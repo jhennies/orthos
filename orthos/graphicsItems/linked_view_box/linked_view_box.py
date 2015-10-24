@@ -232,6 +232,19 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         #print "max:",maxBlockCoord
 
     # events from user
+    # 
+    # 
+    # 
+    
+    def mouseClickEvent(self, ev, double=False):
+        pos = self.mapToView(ev.pos())
+        pos = pos.x(),pos.y()
+        s2d = self.viewSpatialShape
+        if pos[0] >=0.0 and pos[0]<s2d[0] and  pos[1] >=0.0 and pos[1]<s2d[0] :
+            if ev.button() ==QtCore.Qt.MiddleButton and ev.double():
+                self.navigator.change2PlanesByDoubleClick(self.viewAxis, (int(pos[0]), int(pos[1]) ) )
+                
+
     def mouseDragEvent(self, ev, axis=None):
         kmods = ev.modifiers()
         if kmods & pg.QtCore.Qt.ControlModifier and ev.button() == QtCore.Qt.LeftButton:
