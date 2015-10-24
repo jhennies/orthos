@@ -3,7 +3,9 @@ import sys
 import time
 from functools import partial
 import threading
-from kivy.clock import Clock, mainthread
+
+
+
 class Task(object):
     def __init__(self,f, *args,**kwargs):
         self.f = f

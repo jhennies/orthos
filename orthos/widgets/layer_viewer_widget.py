@@ -52,6 +52,7 @@ class LayerViewerWidget(QtGui.QWidget):
         self.orthoViewsDocks = []
         self.renderDock = None
         self.setupUI()
+
     def setupUI(self):
         self.mainLayout = QtGui.QHBoxLayout()
         self.setLayout(self.mainLayout)
@@ -151,6 +152,7 @@ class LayerViewerWidget(QtGui.QWidget):
         else:
             raise RuntimeError("Not yet implemented")
 
-    def update(self):
+    def rangeChanged(self):
+        pass
         for vbw in self.viewBoxWidgets :
-            vbw.viewBox.renderArea.updateVisibleBlocks()
+            vbw.viewBox.rangeChanged()

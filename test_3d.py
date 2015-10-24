@@ -23,17 +23,18 @@ mw.resize(800, 600)
 
 #f = "/media/tbeier/data/datasets/hhess/2x2x2nm_chunked/data.h5"
 f = "/home/tbeier/Desktop/hhes/pmap_pipe/raw.h5"
-f = "/media/tbeier/data/datasets/hhess/2x2x2nm_chunked/data.h5"
-f = "/media/tbeier/data/datasets/hhess/pmap_pipe/raw.h5"
+#f = "/media/tbeier/data/datasets/hhess/2x2x2nm_chunked/data.h5"
+#f = "/media/tbeier/data/datasets/hhess/pmap_pipe/raw.h5"
 
 
 rawSource = VigraChunkedArrayHdf5(f,'data')
-rawLayer = GrayscaleLayer(name='raw',dataSource=rawSource)
+rawLayer = GrayscaleLayer(name='raw',levels=[0,255],dataSource=rawSource)
 
 # pmap layer
 f = "/media/tbeier/data/datasets/hhess/pmap_pipe/pmap_c0.h5"
+f = "/home/tbeier/Desktop/hhes/pmap_pipe/pmap_c0.h5"
 pmapSource = VigraChunkedArrayHdf5(f,'data')
-pmapLayer = GrayscaleLayer(name='pmap',dataSource=pmapSource,mult=255.0)
+pmapLayer = GrayscaleLayer(name='pmap',levels=[0.0,1.0],dataSource=pmapSource,mult=255.0)
 
 
 
@@ -48,8 +49,8 @@ opt.hasTimeAxis = False
 viewerWidget = LayerViewerWidget(spatialShape=spatialShape, options=opt)
 mw.setCentralWidget(viewerWidget)
 viewerWidget.addLayer(rawLayer)
-#viewerWidget.addLayer(pmapLayer)
-viewerWidget.update()
+viewerWidget.addLayer(pmapLayer)
+viewerWidget.rangeChanged()
 
 
 

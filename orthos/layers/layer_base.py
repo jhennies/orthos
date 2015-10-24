@@ -1,9 +1,11 @@
-from abc import abstractmethod
+from abc import ABCMeta, abstractmethod
 from pyqtgraph.Qt import QtGui, QtCore
 from collections import OrderedDict
 from  ..widgets.layer_base_ctrl_widget import *
-
-
+from  ..graphicsItems.linked_view_box.tile_items import *
+from  ..parallel import *
+import datetime
+import time
 # request which can be send to a layer
 
 class LayerRequestBase(object):
@@ -51,6 +53,12 @@ class LayerBase(QtCore.QObject):
         self.spatialBounds_ = spatialBounds
         self.timeBounds_ = timeBounds
         self.priority_ = priority
+        self.pool = QtCore.QThreadPool.globalInstance()
+        self.threadPool = ThreadPool(8)
+
+    def makeTileGraphicsItem(self):
+        raise RuntimeError("not implemented")
+
 
     def makeCtrlWidget(self):
         return LayerBaseCtrlWidget(layer=self)
@@ -101,6 +109,12 @@ class LayerBase(QtCore.QObject):
         return self.layerZValue_
 
 
+    def onTileAppear(self, tileItem, bi):
+        raise RuntimeError("not implemented")
+    def onTileDisappear(self, tileItem):
+        raise RuntimeError("not implemented")
+
+
 class PixelLayerBase(LayerBase):
     def __init__(self, name, layerZValue=1, alpha=1.0, visible=True, 
                  spatialBounds=(None,None,None), 
@@ -111,11 +125,23 @@ class PixelLayerBase(LayerBase):
 
 
 
+
+class UpdateData(object):
+    def __init__(self,data,pos,ts):
+        self.data = data
+        self.pos = pos
+        self.ts = ts
+
+
 class GrayscaleLayer(PixelLayerBase):
-    def __init__(self,name, dataSource, mult=None):
+
+    sigGradientEditorChanged = QtCore.Signal(object)
+
+    def __init__(self,name, levels,dataSource, mult=None):
         self.mult = mult
         self.dataSource = dataSource
         self.shape = self.dataSource.shape
+        self.levels = levels
         spatialBounds=((0,0,0), self.shape)
         timeBounds=(0,1)
         super(GrayscaleLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
@@ -130,6 +156,60 @@ class GrayscaleLayer(PixelLayerBase):
         #    data*=self.mult
         ##data +=time
         return data
+
+    @abstractmethod
+    def makeTileGraphicsItem(self):
+        ti = TileImageItem()
+        self.sigAlphaChanged.connect(ti.setOpacity)
+        self.sigVisibilityChanged.connect(ti.onChangeLayerVisible)
+        self.sigGradientEditorChanged.connect(ti.setLookupTable)
+        return ti
+
+    def makeCtrlWidget(self):
+        return GrayScaleLayerCtrl(layer=self)
+
+    def onGradientEditorChanged(self, gi):
+        lut = gi.getLookupTable(256)
+        self.sigGradientEditorChanged.emit(lut)
+
+    def onTileAppear(self, tileItem):
+        spatialSlicing,blockBegin,blockEnd = tileItem.make3dSlicingAndBlockBegin()
+
+        def fetchData(ts, spatialSlicing,blockBegin, dataSource,item):
+            data = dataSource[tuple(spatialSlicing)].squeeze()
+            item.setImageToUpdateFrom(data,ts)
+            d = UpdateData(None,blockBegin,ts)
+            item.updateQueue.sigUpdateFinished.emit(d)
+
+        def onTaskFinished(future, item, blockBegin):
+            try:
+                exp =  future.exception()
+                if exp is not None:
+                   raise exp
+            except concurrent.futures.CancelledError:
+                pass
+            except RuntimeError as e:
+                print e
+            #item.updateQueue.sigUpdateFinished.emit(blockBegin)
+
+        ts = time.clock()
+        task = Task(fetchData,ts,spatialSlicing,blockBegin,self.dataSource, tileItem)
+        onF = partial(onTaskFinished,item=tileItem, blockBegin=blockBegin)
+        future = self.threadPool.submit(task=task, onTaskFinished=onF)
+
+        # add future to UpdateQueue
+        tileItem.updateQueue.addFuture(future)
+
+
+
+
+
+    def onTileScrollCoordinateChanged(self, tileItem,coord):
+        assert tileItem.blockCoord is not None
+        self.onTileAppear(tileItem)
+
+    def onTileDisappear(self, tileItem):
+        print self.name(),"disappear"
 
 
 class PixelSegmentationEdgeLayerBase(object):

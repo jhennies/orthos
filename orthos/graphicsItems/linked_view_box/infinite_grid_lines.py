@@ -58,7 +58,7 @@ class InfiniteGridLines(pg.GraphicsObject):
 
             # draw horizonal lines
             minBlockC = minX/bs2d[0],minY/bs2d[1]
-            maxBlockC = maxX/bs2d[0] + 2,maxY/bs2d[1] +2
+            maxBlockC = maxX/bs2d[0] + 2,maxY/bs2d[1] +1
 
 
             for bcx in range(minBlockC[0],maxBlockC[0]):

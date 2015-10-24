@@ -47,6 +47,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         
         sShape = navigator.spatialShape
         viewSpatialShape = (sShape[self.viewAxis[0]], sShape[self.viewAxis[1]] )
+        self.viewSpatialShape = viewSpatialShape
         self.setRange(xRange=(0,100),yRange=(0,100))
         #self.setLimits(
         #xMin=-1*viewSpatialShape[0],xMax=2*viewSpatialShape[0], 
@@ -83,15 +84,11 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         self.addItem(self.gridLines,ignoreBounds=False)
         self.gridLines.setZValue(14)
         
-        # render area
-        self.renderArea = RenderArea(self)
-        #self.addItem(self.renderArea)
-        self.sigRectChanged.connect(self.renderArea.onViewRectChanged)
-        #self.sigScrolled.connect(self.renderArea.onScrolled)
+
 
 
         # new better tiling
-        self.tileGrid = TileGrid(self,0,tileGridShape=(5,5))
+        self.tileGrid = TileGrid(self,0,tileGridShape=(10,10))
         self.addItem(self.tileGrid)
         #navigation lines
         self.axis0Line = InfiniteLine(movable=True, angle=90,pen=pg.mkPen(color=axisColor(viewAxis[0]),width=3))
@@ -106,8 +103,8 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         def a1Changed(line):
             v = int(line.value()+0.5)
             self.navigator.changedPlane(self.viewAxis[1],v)
-        self.axis0Line.sigPositionChangeFinished.connect(a0Changed)
-        self.axis1Line.sigPositionChangeFinished.connect(a1Changed)
+        self.axis0Line.sigPositionChanged.connect(a0Changed)
+        self.axis1Line.sigPositionChanged.connect(a1Changed)
 
 
         self.addItem(self.axis0Line, ignoreBounds=True)
@@ -143,28 +140,42 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         #print "rect buffer",self.viewRectBuffer
         #print "ps   buffer",self.viewPixelSizeBuffer
 
-        try:
-            if self.viewPixelSizeBuffer is None:
-                self.viewPixelSizeBuffer = [ round(x,8) for x in self.viewPixelSize()]
+        #try:
+        if self.viewPixelSizeBuffer is None:
+            self.viewPixelSizeBuffer = [ round(x,8) for x in self.viewPixelSize()]
+            self.sigPixelSizeChanged.emit(self.viewPixelSizeBuffer)
+        else:
+            pz = [ round(x,8) for x in self.viewPixelSize()]
+            if pz != self.viewPixelSizeBuffer:
+                self.viewPixelSizeBuffer = pz
                 self.sigPixelSizeChanged.emit(self.viewPixelSizeBuffer)
-            else:
-                pz = [ round(x,8) for x in self.viewPixelSize()]
-                if pz != self.viewPixelSizeBuffer:
-                    self.viewPixelSizeBuffer = pz
-                    self.sigPixelSizeChanged.emit(self.viewPixelSizeBuffer)
 
-            if self.viewRectBuffer is None:
-                self.viewRectBuffer = self.state['viewRange']
+        if self.viewRectBuffer is None:
+            #print "buffer is NOne",self.scrollAxis
+            self.viewRectBuffer = numpy.array(self.state['viewRange'])
+            assert self.viewRectBuffer.shape == (2,2)
+            self.sigRectChanged.emit(self.viewRectBuffer)
+        else:
+            assert self.viewRectBuffer.shape == (2,2)
+            #print "WE HAVE BUFFER",self.scrollAxis
+            vr = numpy.array(self.state['viewRange'])
+            vrr = numpy.round(vr,5)
+
+            assert self.viewRectBuffer.shape == (2,2)
+            vrbr = numpy.round(self.viewRectBuffer,5)
+            assert vrbr.shape == (2,2)
+
+
+            if numpy.allclose(vrr,vrbr) == False:
+                #print "chages"
+                self.viewRectBuffer = vr
+                assert self.viewRectBuffer.shape == (2,2)
                 self.sigRectChanged.emit(self.viewRectBuffer)
-            else:
-                vr = self.state['viewRange']
-                vrr = numpy.round(vr,5)
-                vrbr = numpy.round(self.viewPixelSizeBuffer,5)
-                if numpy.allclose(vrr,vrbr) == False:
-                    self.viewRectBuffer =vr
-                    self.sigRectChanged.emit(self.viewRectBuffer)
-        except:
-            pass
+            #else:
+            #    ##pass
+            #    print "no change"
+        #except:
+            #pass
 
     def integralViewBounds(self, noZeroMin=False):
         vrx = numpy.round(self.state['viewRange'][0],0).astype('int64')
@@ -176,6 +187,18 @@ class InfiniteBlockedViewBox(pg.ViewBox):
             minCoord[1] = max(0,minCoord[1])
         return minCoord, maxCoord
 
+    def integralViewBounds2(self):
+        vrx = numpy.round(self.state['viewRange'][0],0).astype('int64')
+        vry = numpy.round(self.state['viewRange'][1],0).astype('int64')
+        minCoord = numpy.array([vrx[0],vry[0]])
+        maxCoord = numpy.array([vrx[1],vry[1]])
+        minCoord[0] = max(0,minCoord[0])
+        minCoord[1] = max(0,minCoord[1])
+        maxCoord[0] = min(self.viewSpatialShape[0],maxCoord[0])
+        maxCoord[1] = min(self.viewSpatialShape[1],maxCoord[1])
+        return minCoord, maxCoord
+
+
     def make3DCoordinate(self, coord, scrollOffset=0):
         coord3d = [0,0,0]
         coord3d[self.scrollAxis] = self.scrollCoordinate + scrollOffset
@@ -183,17 +206,19 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         coord3d[self.viewAxis[1]] = coord[1]
         return coord3d
 
+    def get2dBlocking(self,blockingIndex):
+        return self.navigator.mlBlocking.blockings2d[self.scrollAxis][blockingIndex]
     def onPixelSizeChanged(self, pz):
         self.bestBlockIndex = self.findBestBlockIndex()
         #print "best index",self.bestBlockIndex
     
     def changeScrollCoordinate(self, newScrollCoordinate):
         self.scrollCoordinate = newScrollCoordinate
-        self.renderArea.onScrolled()
+        self.tileGrid.onScrollCoordinateChanged(newScrollCoordinate)
 
     def onTimeChanged(self, newTime):
         self.timeCoordinate = newTime
-        self.renderArea.onTimeChanged(newTime)
+        self.tileGrid.onTimeCoordinateChanged(newScrollCoordinate)
     def rectChanged(self, vr):
         #print "rect changed"
         pass
