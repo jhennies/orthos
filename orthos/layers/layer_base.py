@@ -175,11 +175,17 @@ class GrayscaleLayer(PixelLayerBase):
     def onTileAppear(self, tileItem):
         spatialSlicing,blockBegin,blockEnd = tileItem.make3dSlicingAndBlockBegin()
 
-        def fetchData(ts, spatialSlicing,blockBegin, dataSource,item):
-            data = dataSource[tuple(spatialSlicing)].squeeze()
-            item.setImageToUpdateFrom(data,ts)
-            d = UpdateData(None,blockBegin,ts)
-            item.updateQueue.sigUpdateFinished.emit(d)
+        sc = tileItem.viewBox.scrollCoordinate
+        tc = tileItem.viewBox.timeCoordinate
+        def fetchData(ts, spatialSlicing,blockBegin, dataSource,item,sc,tc):
+            nsc = item.viewBox.scrollCoordinate
+            ntc = item.viewBox.timeCoordinate
+            if sc == nsc and tc == ntc and item.tileVisible():
+                data = dataSource[tuple(spatialSlicing)].squeeze()
+                item.setImageToUpdateFrom(data,ts)
+                d = UpdateData(None,blockBegin,ts)
+                item.updateQueue.sigUpdateFinished.emit(d)
+
 
         def onTaskFinished(future, item, blockBegin):
             try:
@@ -193,9 +199,9 @@ class GrayscaleLayer(PixelLayerBase):
             #item.updateQueue.sigUpdateFinished.emit(blockBegin)
 
         ts = time.clock()
-        task = Task(fetchData,ts,spatialSlicing,blockBegin,self.dataSource, tileItem)
+        task = Task(fetchData,ts,spatialSlicing,blockBegin,self.dataSource, tileItem,sc,tc)
         onF = partial(onTaskFinished,item=tileItem, blockBegin=blockBegin)
-        future = self.threadPool.submit(task=task, onTaskFinished=onF)
+        future = self.threadPool.submit(task=task, onTaskFinished=None)
 
         # add future to UpdateQueue
         tileItem.updateQueue.addFuture(future)
@@ -209,8 +215,8 @@ class GrayscaleLayer(PixelLayerBase):
         self.onTileAppear(tileItem)
 
     def onTileDisappear(self, tileItem):
-        print self.name(),"disappear"
-
+        #print self.name(),"disappear"
+        pass
 
 class PixelSegmentationEdgeLayerBase(object):
     def __init__(self):

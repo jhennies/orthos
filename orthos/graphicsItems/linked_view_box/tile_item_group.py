@@ -77,7 +77,7 @@ class TileGrid(pg.ItemGroup):
         self.tileShape = self.mlBlocking.blockShape2d(blockingIndex,self.scrollAxis)
         self.nTileItems = tileGridShape[0]*tileGridShape[1]
         self.tileItems = [TileItemGroup(self.tileShape,self) for i in range(self.nTileItems)]
-        
+        self.tileVisible_ = False
         # add all tile items to the group
         for tileItem in self.tileItems:
             tileItem.setPos(0,0)
@@ -106,15 +106,16 @@ class TileGrid(pg.ItemGroup):
         self.visibleTiles.sigTilesDisappeared.connect(self.onTilesDisappear)
 
     def onTilesAppear(self, tiles):
-        print len(self.visibleTiles.visibleBlocks),self.nTileItems
+        self.tileVisible_ = True
+        #print len(self.visibleTiles.visibleBlocks),self.nTileItems
         assert len(self.visibleTiles.visibleBlocks)<=self.nTileItems
         tileBlockCoordToTileIndex  = self.tileBlockCoordToTileIndex
         for tileBlockCoord in tiles:
 
             # nasty mappings
             assert tileBlockCoord not in self.tileBlockCoordToTileIndex
-            if len(self.freeTiles) ==0 :
-                print self.usedTiles
+            #if len(self.freeTiles) ==0 :
+            #    print self.usedTiles
             freeTileIndex = self.freeTiles.pop()
             assert freeTileIndex not in self.usedTiles
             freeTileItem = self.tileItems[freeTileIndex]
@@ -126,6 +127,7 @@ class TileGrid(pg.ItemGroup):
             #print "tile item scale",freeTileItem.scale()
 
     def onTilesDisappear(self, tiles):
+        self.tileVisible_ = False
         tileBlockCoordToTileIndex  = self.tileBlockCoordToTileIndex
         for tileBlockCoord in tiles:
             assert tileBlockCoord in self.tileBlockCoordToTileIndex
@@ -138,13 +140,15 @@ class TileGrid(pg.ItemGroup):
             usedTileItem.onTileDisappear()
 
     def onAddLayer(self, layer):
-        print "tile item group add layer",layer.name()
+        #print "tile item group add layer",layer.name()
         self.layers[layer.name()] = layer
         for tileItem in self.tileItems:
             tileGraphicItem = layer.makeTileGraphicsItem()
             tileGraphicItem.initialize(layer=layer,viewBox=self.viewBox,
                                        blockingIndex=self.blockingIndex)
             tileItem.addItemToTile(tileGraphicItem)
+            #if self.tileVisible_ :
+            #    self.
     def onRemoveLayer(self, layer):
         self.layers[layer.name()] = layer
         for tileItem in self.tileItems:
@@ -164,26 +168,31 @@ class TileGrid(pg.ItemGroup):
             #print "tileBlockCoord",tileBlockCoord
 
 class TileItemGroup(pg.ItemGroup):
-    """ A Container of all Graphics Items in a Tile
+    """ A Container of all Graphics Items in a single(!) 2d-tile
     """
 
     def __init__(self, tileShape,parent):
         super(TileItemGroup,self).__init__()
         self.tileShape = tileShape
         self.items = set()
-        self.isVisibleTile = False
+        self.tileVisible_ = False
+        self.blockCoord2d_ = None
     def addItemToTile(self, item):
         self.addItem(item)
         self.items.add(item)
+        if self.tileVisible_:
+            item.onTileAppear(self.blockCoord2d_)
     def removeItemFromTile(self, item):
         self.removeFromGroup(item)
         self.items.remove(item)
 
     def onTileAppear(self, gbi):
-        self.setVisible(True)
+        self.tileVisible_ = True
+        self.blockCoord2d_ = gbi
         for item in self.items:
             item.onTileAppear(gbi)
     def onTileDisappear(self):
+        self.tileVisible_ = False
         for item in self.items:
             item.onTileDisappear()
 

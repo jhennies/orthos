@@ -95,6 +95,8 @@ class TileItemMixIn(object):
         else:
             self.setVisible(False)
 
+    def tileVisible(self):
+        return self.tileVisible_
 
     @property
     def timeCoordinate(self):

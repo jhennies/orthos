@@ -46,15 +46,8 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         self.timeCoordinate = 0
         
         sShape = navigator.spatialShape
-        viewSpatialShape = (sShape[self.viewAxis[0]], sShape[self.viewAxis[1]] )
-        self.viewSpatialShape = viewSpatialShape
+        self.viewSpatialShape = (sShape[self.viewAxis[0]], sShape[self.viewAxis[1]] )
         self.setRange(xRange=(0,100),yRange=(0,100))
-        #self.setLimits(
-        #xMin=-1*viewSpatialShape[0],xMax=2*viewSpatialShape[0], 
-        #yMin=-1*viewSpatialShape[1],yMax=2*viewSpatialShape[1],
-        #minXRange=100,minYRange=100,
-        #maxXRange=viewSpatialShape[0],
-        #maxYRange=viewSpatialShape[1])
 
         self.setAspectLocked(True)
         self.setMenuEnabled(False)
@@ -115,9 +108,6 @@ class InfiniteBlockedViewBox(pg.ViewBox):
 
         self.bestBlockIndex = None 
 
-        #self.rangeChanged()
-
-
 
     def findBestBlockIndex(self):
         bestBlockIndex = 0
@@ -162,32 +152,15 @@ class InfiniteBlockedViewBox(pg.ViewBox):
             #print "WE HAVE BUFFER",self.scrollAxis
             vr = numpy.array(self.state['viewRange'])
             vrr = numpy.round(vr,5)
-
             assert self.viewRectBuffer.shape == (2,2)
             vrbr = numpy.round(self.viewRectBuffer,5)
             assert vrbr.shape == (2,2)
-
-
             if numpy.allclose(vrr,vrbr) == False:
                 #print "chages"
                 self.viewRectBuffer = vr
                 assert self.viewRectBuffer.shape == (2,2)
                 self.sigRectChanged.emit(self.viewRectBuffer)
-            #else:
-            #    ##pass
-            #    print "no change"
-        #except:
-            #pass
 
-    def integralViewBounds(self, noZeroMin=False):
-        vrx = numpy.round(self.state['viewRange'][0],0).astype('int64')
-        vry = numpy.round(self.state['viewRange'][1],0).astype('int64')
-        minCoord = numpy.array([vrx[0],vry[0]])
-        maxCoord = numpy.array([vrx[1],vry[1]])
-        if noZeroMin:
-            minCoord[0] = max(0,minCoord[0])
-            minCoord[1] = max(0,minCoord[1])
-        return minCoord, maxCoord
 
     def integralViewBounds2(self):
         vrx = numpy.round(self.state['viewRange'][0],0).astype('int64')
@@ -221,22 +194,10 @@ class InfiniteBlockedViewBox(pg.ViewBox):
     def onTimeChanged(self, newTime):
         self.timeCoordinate = newTime
         self.tileGrid.onTimeCoordinateChanged(newScrollCoordinate)
+
     def rectChanged(self, vr):
-        #print "rect changed"
         pass
-        #vr = numpy.round(self.viewRange(),0).astype('int64')
-        #vr /= self.blockSizes[0]
 
-        #minBlockCoord = vr[:,0]
-        #maxBlockCoord = vr[:,1]
-
-        #print "min:",minBlockCoord
-        #print "max:",maxBlockCoord
-
-    # events from user
-    # 
-    # 
-    # 
     
     def mouseClickEvent(self, ev, double=False):
         pos = self.mapToView(ev.pos())
@@ -283,48 +244,3 @@ class InfiniteBlockedViewBox(pg.ViewBox):
                 self.scrollCoordinate = newCoord
                 self.navigator.changedPlane(self.scrollAxis,self.scrollCoordinate)
 
-
-if __name__ == "__main__":
-    import numpy as np
-    from pyqtgraph.Qt import QtGui, QtCore
-    import pyqtgraph as pg
-
-    app = QtGui.QApplication([])
-    mw = QtGui.QMainWindow()
-    mw.setWindowTitle('pyqtgraph example: ViewBox')
-    mw.show()
-    mw.resize(800, 600)
-
-    gv = pg.GraphicsView()
-    mw.setCentralWidget(gv)
-    l = QtGui.QGraphicsGridLayout()
-    l.setHorizontalSpacing(0)
-    l.setVerticalSpacing(0)
-
-    vb = InfiniteBlockedViewBox(minPixelSize=(0.1,0.1),maxPixelSize=(10,10))
-
-    # img = pg.ImageItem(border='w')
-    # data = np.random.normal(size=(600, 600)).astype(np.uint8)
-    # img.setImage(data)
-    # vb.addItem(img)
-
-    xScale = pg.AxisItem(orientation='bottom', linkView=vb)
-    l.addItem(xScale, 1, 1)
-    yScale = pg.AxisItem(orientation='left', linkView=vb)
-    l.addItem(yScale, 0, 0)
-
-    l.addItem(vb, 0, 1)
-
-
-
-    #vb2 = InfiniteBlockedViewBox(minPixelSize=(0.1,0.1),maxPixelSize=(10,10))
-    #l.addItem(vb2, 2, 0)
-
-
-    gv.centralWidget.setLayout(l)
-
-    ## Start Qt event loop unless running in interactive mode.
-    if __name__ == '__main__':
-        import sys
-        if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-            QtGui.QApplication.instance().exec_()
