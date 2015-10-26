@@ -149,17 +149,6 @@ class GrayscaleLayer(PixelLayerBase):
         timeBounds=(0,1)
         super(GrayscaleLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
 
-    def request3DBlock(self, spatialSlicing, time):
-        #print slicing
-        for i,s in enumerate(spatialSlicing):
-            if s.start < 0 or s.stop>self.shape[i]:
-                return None
-        data = self.dataSource[tuple(spatialSlicing)].copy()
-        #if self.mult is not None:
-        #    data*=self.mult
-        ##data +=time
-        return data
-
     @abstractmethod
     def makeTileGraphicsItem(self):
         ti = TileImageItem()
@@ -223,17 +212,94 @@ class GrayscaleLayer(PixelLayerBase):
 
 
 
-    def mouseClickEvent(self, ev, pos):
-        print "layer",self.name(),"clicked at",pos
+    def mouseClickEvent(self, ev, pos2d, clickedViewBox):
+        print "layer",self.name(),"clicked at",pos2d
 
 
 
 
 
+class PaintLayer(PixelLayerBase):
 
-class PixelSegmentationEdgeLayerBase(object):
-    def __init__(self):
+    sigGradientEditorChanged = QtCore.Signal(object)
+
+    def __init__(self,name,shape):
+        self.shape = shape
+        spatialBounds=((0,0,0), self.shape)
+        timeBounds=(0,1)
+        super(PaintLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
+
+
+
+    @abstractmethod
+    def makeTileGraphicsItem(self):
+        ti = TilePaintImage()
+        self.sigAlphaChanged.connect(ti.setOpacity)
+        self.sigVisibilityChanged.connect(ti.onChangeLayerVisible)
+        return ti
+
+    #def makeCtrlWidget(self):
+    #    return GrayScaleLayerCtrl(layer=self)
+
+
+
+    def onTileAppear(self, tileItem):
+        spatialSlicing,blockBegin,blockEnd = tileItem.make3dSlicingAndBlockBegin()
+        tileItem.setPos(*blockBegin)
+
+        s2d = tileItem.shape2d()
+        imgShape = s2d + (4,)
+
+        data = numpy.zeros(imgShape,dtype='uint8')*255
+        tileItem.setImage(data)
+
+
+        #sc = tileItem.viewBox.scrollCoordinate
+        #tc = tileItem.viewBox.timeCoordinate
+        #def fetchData(ts, spatialSlicing,blockBegin, dataSource,item,sc,tc):
+        #    nsc = item.viewBox.scrollCoordinate
+        #    ntc = item.viewBox.timeCoordinate
+        #    if sc == nsc and tc == ntc and item.tileVisible():
+        #        data = dataSource[tuple(spatialSlicing)].squeeze()
+        #        item.setImageToUpdateFrom(data,ts)
+        #        d = UpdateData(None,blockBegin,ts)
+        #        item.updateQueue.sigUpdateFinished.emit(d)
+        #def onTaskFinished(future, item, blockBegin):
+        #    try:
+        #        exp =  future.exception()
+        #        if exp is not None:
+        #           raise exp
+        #    except concurrent.futures.CancelledError:
+        #        pass
+        #    except RuntimeError as e:
+        #        print e
+        #    #item.updateQueue.sigUpdateFinished.emit(blockBegin)
+        #ts = time.clock()
+        #task = Task(fetchData,ts,spatialSlicing,blockBegin,self.dataSource, tileItem,sc,tc)
+        #onF = partial(onTaskFinished,item=tileItem, blockBegin=blockBegin)
+        #future = self.threadPool.submit(task=task, onTaskFinished=None)
+        ## add future to UpdateQueue
+        #tileItem.updateQueue.addFuture(future)
+
+
+
+
+
+    def onTileScrollCoordinateChanged(self, tileItem,coord):
+        assert tileItem.blockCoord is not None
+        self.onTileAppear(tileItem)
+
+    def onTileDisappear(self, tileItem):
+        #print self.name(),"disappear"
         pass
+
+
+
+    def mouseClickEvent(self, ev, pos2d, clickedViewBox):
+        #print "layer",self.name(),"clicked at",pos2d
+        pass
+
+
 
 
 
@@ -257,6 +323,7 @@ class PixelLayers(QtCore.QObject):
         self.sigPixelLayerRemoved.emit(layer)
 
 
-    #def mouseClickEvent(self, ev, pos3d, time, vb):
-    #    for layerName in self.layers:
-    #        self.layers[layerName].mouseClickEvent(ev, pos3d, time)
+    def mouseClickEvent(self, ev, pos2d, clickedViewBox):
+        #print "click in pixel layers"
+        for layerName in self.layers:
+            self.layers[layerName].mouseClickEvent(ev, pos2d, clickedViewBox)

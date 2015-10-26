@@ -61,6 +61,8 @@ class VisibleTiles(QtCore.QObject):
 
 
 
+
+
 class TileGrid(pg.ItemGroup):
     """ A GRid of TileItems
     """

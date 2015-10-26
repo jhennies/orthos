@@ -81,19 +81,25 @@ class TileItemMixIn(object):
         if visible:
             if self.tileVisible_:
                 self.setVisible(True)
+                self.setEnabled(True)
             else:
                 self.setVisible(False)
+                self.setEnabled(False)
         else:
             self.setVisible(False)
+            self.setEnabled(False)
     def onChangeTileVisible(self, visible):
         self.tileVisible_ = visible
         if visible :
             if self.layerVisible_:
                 self.setVisible(True)
+                self.setEnabled(True)
             else:
                 self.setVisible(False)
+                self.setEnabled(False)
         else:
             self.setVisible(False)
+            self.setEnabled(False)
 
     def tileVisible(self):
         return self.tileVisible_
@@ -109,6 +115,11 @@ class TileItemMixIn(object):
         begin3d = self.viewBox.make3DCoordinate(blockBegin)
         end3d = self.viewBox.make3DCoordinate(blockEnd,1)
         return make3dSlicing_(begin3d, end3d),blockBegin,blockEnd
+
+    def shape2d(self):
+        blockBegin, blockEnd = self.blocking2d[self.blockCoord]
+        return tuple([e-b for e,b in zip(blockEnd,blockBegin)])
+
 
 class TileImageItem(pg.ImageItem, TileItemMixIn):
 
@@ -144,3 +155,65 @@ class TileImageItem(pg.ImageItem, TileItemMixIn):
         self.newImgDict[ts] = newImage.copy()
         self.setNewImageLock.release()
 
+    def mouseClickEvent(self, ev, double=False):
+        print "click in image",ev.pos()
+
+
+
+class TilePaintImage(pg.ImageItem, TileItemMixIn):
+
+    def __init__(self, *args, **kwargs):
+
+        self.setNewImageLock = threading.Lock()  
+        BaseImageItem = pg.ImageItem
+        BaseImageItem.__init__(self, *args, **kwargs)   
+        TileItemMixIn.__init__(self)
+        self.lastStemp = time.clock()
+        self.newImgDict = dict()
+    def onUpdateFinished(self, updateData):
+        #print "update finished",updateData.pos
+        ts = updateData.ts
+        #print ts
+        #print "own ts",self.lastStemp,"update ts",ts
+        if ts >= self.lastStemp:
+            #print "FRESH UPDATE"
+            self.setNewImageLock.acquire()
+            self.setPos(*updateData.pos)
+            self.lastStemp = ts
+            newImg = self.newImgDict.pop(ts)
+            self.setImage(newImg,levels=self.layer.levels)
+            #print self.levels
+            self.setNewImageLock.release()
+        else:
+            self.setNewImageLock.acquire()
+            self.newImgDict.pop(ts)
+            self.setNewImageLock.release()
+
+    def setImageToUpdateFrom(self, newImage, ts):
+        self.setNewImageLock.acquire()
+        self.newImgDict[ts] = newImage.copy()
+        self.setNewImageLock.release()
+
+
+    #def mouseClickEvent(self, ev, double=False):
+    #    pos = ev.pos()
+    #    pos = pos.x(),pos.y()
+    #    print "click in paint",ev.pos()
+    #    self.image[pos[0],pos[1],0:4] = 255 
+    #    self.updateImage(self.image)
+
+    def mouseDragEvent(self, ev, axis=None):
+        kmods = ev.modifiers()
+        s2d = self.shape2d()
+        if  ev.button() == QtCore.Qt.LeftButton and (kmods == pg.QtCore.Qt.NoModifier): #and (noShift and noCtrl):
+            
+            pos = ev.pos()
+            pos = pos.x(),pos.y()
+            if pos[0]>=0 and pos[0]<s2d[0] and pos[1]>=0 and pos[1]<s2d[1]:
+
+                ev.accept()
+                pos = ev.pos()
+                pos = pos.x(),pos.y()
+                print "click in paint",ev.pos()
+                self.image[pos[0],pos[1],0:4] = 255 
+                self.updateImage(self.image)
