@@ -207,7 +207,8 @@ class InfiniteBlockedViewBox(pg.ViewBox):
             if ev.button() ==QtCore.Qt.MiddleButton and ev.double():
                 ev.accept()
                 self.navigator.change2PlanesByDoubleClick(self.viewAxis, (int(pos[0]), int(pos[1]) ) )
-                
+            #else:
+            #    self.pixelLayers.mouseClickEvent(ev=ev, pos3d=self.make3DCoordinate(pos),time)
 
     def mouseDragEvent(self, ev, axis=None):
         kmods = ev.modifiers()

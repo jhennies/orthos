@@ -105,6 +105,7 @@ class TileGrid(pg.ItemGroup):
         self.visibleTiles.sigTilesAppeared.connect(self.onTilesAppear)
         self.visibleTiles.sigTilesDisappeared.connect(self.onTilesDisappear)
 
+
     def onTilesAppear(self, tiles):
         self.tileVisible_ = True
         #print len(self.visibleTiles.visibleBlocks),self.nTileItems

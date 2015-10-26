@@ -133,6 +133,9 @@ class UpdateData(object):
         self.ts = ts
 
 
+
+
+
 class GrayscaleLayer(PixelLayerBase):
 
     sigGradientEditorChanged = QtCore.Signal(object)
@@ -218,6 +221,16 @@ class GrayscaleLayer(PixelLayerBase):
         #print self.name(),"disappear"
         pass
 
+
+
+    def mouseClickEvent(self, ev, pos):
+        print "layer",self.name(),"clicked at",pos
+
+
+
+
+
+
 class PixelSegmentationEdgeLayerBase(object):
     def __init__(self):
         pass
@@ -244,4 +257,6 @@ class PixelLayers(QtCore.QObject):
         self.sigPixelLayerRemoved.emit(layer)
 
 
-
+    #def mouseClickEvent(self, ev, pos3d, time, vb):
+    #    for layerName in self.layers:
+    #        self.layers[layerName].mouseClickEvent(ev, pos3d, time)
