@@ -334,7 +334,7 @@ class PaintLayer(PixelLayerBase):
         newLabels[newLabels==255] = 0
         self.dataSource.commitSubarray(labelsBlockBegin,newLabels)
 
-        self.dataSource.chunkedArray.flush()
+        #self.dataSource.chunkedArray.flush()
     
 
 

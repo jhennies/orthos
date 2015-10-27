@@ -34,7 +34,20 @@ class LayerViewerOptions(object):
 
 
 
+
+
+class  MainWindow(QtGui.QMainWindow):
+    def __init__(self, *args, **kwargs):
+        super(MainWindow,self).__init__(*args,**kwargs)
+
+    def closeEvent(self,event):
+        if self.closeCallback is not None:
+            self.closeCallback()
+
+
 class LayerViewerWidget(QtGui.QWidget):
+
+
     def __init__(self,spatialShape, nTimePoints=None,options=LayerViewerOptions()):
         super(LayerViewerWidget,self).__init__()
         self.spatialShape = spatialShape
@@ -52,7 +65,7 @@ class LayerViewerWidget(QtGui.QWidget):
         self.orthoViewsDocks = []
         self.renderDock = None
         self.setupUI()
-
+        self.closeCallback = None
     def setupUI(self):
         self.mainLayout = QtGui.QHBoxLayout()
         self.setLayout(self.mainLayout)
@@ -156,3 +169,7 @@ class LayerViewerWidget(QtGui.QWidget):
         pass
         for vbw in self.viewBoxWidgets :
             vbw.viewBox.rangeChanged()
+
+
+            return True
+

@@ -15,7 +15,7 @@ class MultiLevelBlocking(object):
 
     def computeBlocking(self):
         self.blockShapes=numpy.array([
-            (128,)*3, (1024,)*3# (512,)*3,(1024,)*3
+            (256,)*3, (1024,)*3# (512,)*3,(1024,)*3
         ])
         self.blockPixelSizes=numpy.ones(self.blockShapes.shape)
         self.nBlockings = self.blockShapes.shape[0]

@@ -18,3 +18,7 @@ class VigraChunkedArrayHdf5(ArrayDataSourceBase):
         print start
         print val.shape, val.dtype
         self.chunkedArray.commitSubarray(start,val)
+
+    def flushToDisk(self):
+        print "CLOSE THAT ARRAY"
+        self.chunkedArray.flush()
