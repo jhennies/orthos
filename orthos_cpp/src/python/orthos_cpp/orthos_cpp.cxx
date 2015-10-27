@@ -53,7 +53,31 @@
 namespace python = boost::python;
 
 
-
+vigra::NumpyAnyArray 
+applyDrawKernel(
+    vigra::NumpyArray<2,vigra::UInt8> labelImage,
+    vigra::NumpyArray<2,vigra::UInt8> drawKernel,
+    vigra::NumpyArray<2,vigra::UInt8> output
+){
+    int rx = (drawKernel.shape(0) - 1)/2;
+    int ry = (drawKernel.shape(1) - 1)/2;
+    std::cout<<"rx "<<rx<<" rx"<<"\n";
+    for(int y=0; y<labelImage.shape(1); ++y)
+    for(int x=0; x<labelImage.shape(0); ++x){
+        if(labelImage(x,y)!=0){
+            for(int ky=0; ky<drawKernel.shape(1); ++ky)
+            for(int kx=0; kx<drawKernel.shape(0); ++kx){
+                if( x+kx-rx >0 && x+kx-rx <labelImage.shape(0)  &&
+                    y+ky-ry >0 && y+ky-ry <labelImage.shape(1) ){
+                    if(drawKernel(kx,ky)!=0){
+                        output(x+kx-rx,y+ky-ry) = labelImage(x,y);
+                    }
+                }
+            }
+        }
+    }
+    return output;
+}
 
 
 
@@ -62,7 +86,8 @@ BOOST_PYTHON_MODULE_INIT(_orthos_cpp)
     vigra::import_vigranumpy();
 
     python::docstring_options doc_options(true, true, false);
-
+    python::def("applyDrawKernel2d",vigra::registerConverters(&applyDrawKernel))
+    ;
 }
 
 

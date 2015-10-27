@@ -21,22 +21,23 @@ mw.resize(800, 600)
 
 # raw layer
 
-#f = "/media/tbeier/data/datasets/hhess/2x2x2nm_chunked/data.h5"
+
 f = "/home/tbeier/Desktop/hhes/pmap_pipe/raw.h5"
-#f = "/media/tbeier/data/datasets/hhess/2x2x2nm_chunked/data.h5"
-#f = "/media/tbeier/data/datasets/hhess/pmap_pipe/raw.h5"
-
-
-rawSource = VigraChunkedArrayHdf5(f,'data')
+rawSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
 rawLayer = GrayscaleLayer(name='raw',levels=[0,255],dataSource=rawSource)
 
 # pmap layer
-f = "/media/tbeier/data/datasets/hhess/pmap_pipe/pmap_c0.h5"
 f = "/home/tbeier/Desktop/hhes/pmap_pipe/pmap_c0.h5"
-pmapSource = VigraChunkedArrayHdf5(f,'data')
+pmapSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
 pmapLayer = GrayscaleLayer(name='pmap',levels=[0.0,1.0],dataSource=pmapSource,mult=255.0)
 
 
+# labels layer
+f = "/home/tbeier/Desktop/hhes/pmap_pipe/labels_out2.h5"
+labelsSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data',shape=rawSource.shape,
+                                     mode=vigra.HDF5Mode.ReadWrite, compression=vigra.Compression.ZLIB_FAST,
+                                     chunk_shape=[64,64,64],dtype='uint8')
+paintLayer = PaintLayer(name="paint",dataSource=labelsSource)
 
 spatialShape = rawSource.shape
 
@@ -50,6 +51,7 @@ viewerWidget = LayerViewerWidget(spatialShape=spatialShape, options=opt)
 mw.setCentralWidget(viewerWidget)
 viewerWidget.addLayer(rawLayer)
 viewerWidget.addLayer(pmapLayer)
+viewerWidget.addLayer(paintLayer)
 viewerWidget.rangeChanged()
 
 

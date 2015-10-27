@@ -3,8 +3,9 @@ import vigra
 
 
 class VigraChunkedArrayHdf5(ArrayDataSourceBase):
-    def __init__(self, filepath, dset, mutable=False):
-        self.chunkedArray = vigra.ChunkedArrayHDF5(filepath,dset)
+    def __init__(self, **kwargs):
+        mutable = kwargs.pop('mutable',False)
+        self.chunkedArray = vigra.ChunkedArrayHDF5(**kwargs)
         s = self.chunkedArray.shape
         d = self.chunkedArray.dtype
         super(VigraChunkedArrayHdf5, self).__init__(shape=s,dtype=d,
@@ -13,3 +14,7 @@ class VigraChunkedArrayHdf5(ArrayDataSourceBase):
 
     def __getitem__(self,key):
         return self.chunkedArray[key]
+    def commitSubarray(self,start,val):
+        print start
+        print val.shape, val.dtype
+        self.chunkedArray.commitSubarray(start,val)
