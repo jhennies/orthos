@@ -115,13 +115,15 @@ class TileItemMixIn(object):
 
     def make3dSlicingAndBlockBegin(self):
         assert self.isInit
-        blockBegin, blockEnd = self.blocking2d[self.blockCoord]
+        block = self.blocking2d[self.blockCoord]
+        blockBegin, blockEnd = block.begin,block.end
         begin3d = self.viewBox.make3DCoordinate(blockBegin)
         end3d = self.viewBox.make3DCoordinate(blockEnd,1)
         return make3dSlicing_(begin3d, end3d),blockBegin,blockEnd
 
     def shape2d(self):
-        blockBegin, blockEnd = self.blocking2d[self.blockCoord]
+        block = self.blocking2d[self.blockCoord]
+        blockBegin, blockEnd = block.begin,block.end
         return tuple([e-b for e,b in zip(blockEnd,blockBegin)])
 
 
@@ -209,7 +211,7 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
             self.setPos(*updateData.pos)
             self.lastStemp = ts
             newImg = self.newImgDict.pop(ts)
-            print "DO THE UPDATE"
+            #print "DO THE UPDATE"
             self.setImage(newImg)#,levels=(0,255))
             #print self.levels
             self.setNewImageLock.release()

@@ -149,15 +149,13 @@ class TileGrid(pg.ItemGroup):
             tileGraphicItem = layer.makeTileGraphicsItem()
             tileGraphicItem.initialize(layer=layer,viewBox=self.viewBox,
                                        blockingIndex=self.blockingIndex)
-            tileItem.addItemToTile(tileGraphicItem)
+            tileItem.addLayer(layer.name(),tileGraphicItem)
             #if self.tileVisible_ :
             #    self.
     def onRemoveLayer(self, layer):
         self.layers[layer.name()] = layer
         for tileItem in self.tileItems:
-            assert  False
-            #tileGraphicItem = layer.makeTileGraphicsItem()
-            #tileItem.removeItemFromTile(tileGraphicItem)
+            tileItem.removeLayer(layer.name())
         self.layers.pop(layer.name())
 
     def onScrollCoordinateChanged(self, coord):
@@ -169,6 +167,28 @@ class TileGrid(pg.ItemGroup):
             usedTileItem = self.tileItems[usedTileIndex]
             usedTileItem.onScrollCoordinateChanged(coord)
             #print "tileBlockCoord",tileBlockCoord
+            #
+    def yieldVisibleTileItems(self,roi=None):
+        if roi is None:
+            for tileBlockCoord in self.visibleTiles.visibleBlocks:
+                tileIndex =  self.tileBlockCoordToTileIndex[tileBlockCoord]
+                tileItem = self.tileItems[tileBlockCoord]
+                yield tileItem
+        else:
+            raise RuntimeError("not yet implemented")
+
+
+    def yieldVisibleLayerItem(self, layerName,  roi=None):
+        for visibleTilesItem in self.yieldVisibleTileItems(roi=roi):
+            yield visibleTilesItem[layerName]
+
+
+
+
+
+
+
+
 
 class TileItemGroup(pg.ItemGroup):
     """ A Container of all Graphics Items in a single(!) 2d-tile
@@ -177,40 +197,44 @@ class TileItemGroup(pg.ItemGroup):
     def __init__(self, tileShape,parent):
         super(TileItemGroup,self).__init__()
         self.tileShape = tileShape
-        self.items = set()
+        self.items = dict()
         self.tileVisible_ = False
         self.blockCoord2d_ = None
-    def addItemToTile(self, item):
+
+    def __getitem__(self, layerName):
+        return self.items[layerName]
+
+    def addLayer(self,name, item):
         self.addItem(item)
-        self.items.add(item)
+        self.items[name]=item
         if self.tileVisible_:
             item.onTileAppear(self.blockCoord2d_)
-    def removeItemFromTile(self, item):
+    def removeLayer(self,name):
         self.removeFromGroup(item)
-        self.items.remove(item)
+        self.items.pop(item)
 
     def onTileAppear(self, gbi):
         self.tileVisible_ = True
         self.blockCoord2d_ = gbi
-        for item in self.items:
-            item.onTileAppear(gbi)
+        for layerName in self.items:
+            self.items[layerName].onTileAppear(gbi)
     def onTileDisappear(self):
         self.tileVisible_ = False
-        for item in self.items:
-            item.onTileDisappear()
+        for layerName in self.items:
+            self.items[layerName].onTileDisappear()
 
     def onScrollCoordinateChanged(self, coord):
         """ called when scrolled (usually from mouse wheel events)
         """
         # inform all items
-        for item in self.items:
-            item.onScrollCoordinateChanged(coord)
-            assert item.blockCoord is not None
+        for layerName in self.items:
+            self.items[layerName].onScrollCoordinateChanged(coord)
+            assert self.items[layerName].blockCoord is not None
     def onTimeCoordinateChanged(self, coord):
         """ called when current time point changes (usually time-widget)
         """
-        for item in self.items:
-            item.onTimeCoordinateChanged(coord)
+        for layerName in self.items:
+            self.items[layerName].onTimeCoordinateChanged(coord)
 
 
 

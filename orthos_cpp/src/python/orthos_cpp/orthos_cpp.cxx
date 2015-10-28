@@ -53,6 +53,20 @@
 namespace python = boost::python;
 
 
+
+
+class Tiling2d{
+
+};
+
+
+
+
+
+
+
+
+
 vigra::NumpyAnyArray 
 applyDrawKernel(
     vigra::NumpyArray<2,vigra::UInt8> labelImage,
@@ -78,6 +92,16 @@ applyDrawKernel(
     }
     return output;
 }
+
+
+
+
+
+vigra::NumpyAnyArray
+applyDrawKernelOnPath
+
+
+
 
 
 
