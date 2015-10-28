@@ -183,7 +183,7 @@ public:
             ///////////////////////////////////////////////////////////////////////////////
             
             // disappear
-            for(auto bi : disappeared){
+            for(auto & bi  : disappeared){
                 auto iter = blockIndexToTileIndex_.find(bi);
                 const auto ti = iter->second;
                 blockIndexToTileIndex_.erase(iter);
@@ -206,7 +206,7 @@ public:
                 end3d[viewAxis_[1]] = tileInfo.roi2d.end()[1];
 
                 tileInfo.roi3d = Block3d(begin3d, end3d);
-
+                bi = ti;
             }
             // appear
             for(auto bi: appeared){
@@ -218,6 +218,7 @@ public:
                 // update tile info
                 auto & tileInfo = tileInfos_[ti];
                 tileInfo.tileVisible = false;
+                bi = ti;
             }
         }
 

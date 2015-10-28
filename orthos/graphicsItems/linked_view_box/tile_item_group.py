@@ -5,60 +5,6 @@ from operator import mul
 
 import orthos_cpp
 
-def iYield2d(shape):
-    i = 0 
-    for x in range(shape[0]):
-        for y in range(shape[1]):
-            yield i,(x,y)
-            i +=1
-def yield2d(shape):
-    for x in range(shape[0]):
-        for y in range(shape[1]):
-            yield (x,y)
-
-            
-class VisibleTiles(QtCore.QObject):
-
-    sigTilesAppeared  = QtCore.Signal(object)
-    sigTilesDisappeared  = QtCore.Signal(object)
-
-    def __init__(self, tileGrid):
-        super(VisibleTiles,self).__init__()
-        self.tileGrid = tileGrid
-        self.viewBox = tileGrid.viewBox
-        sa = tileGrid.viewBox.scrollAxis 
-        bi = tileGrid.blockingIndex
-        self.tileGridShape = tileGrid.tileGridShape
-        self.blocking2d = tileGrid.mlBlocking.blockings2d[sa][bi]
-        self.blockShape = tileGrid.mlBlocking.blockShape2d(bi, sa)
-        # connect viewbox on change 
-        self.viewBox.sigRectChanged.connect(self.onViewBoxViewRectChanged)
-
-        self.visibleBlocks = set()
-
-    def onViewBoxViewRectChanged(self):
-        minCoord, maxCoord = self.viewBox.integralViewBounds2()
-        startBlockC = minCoord / self.blockShape
-        endBlockC   = maxCoord / self.blockShape + 1
-        nBlocks     = numpy.minimum(self.tileGridShape, endBlockC-startBlockC)
-        newVisibleBlocks = set()
-        for xy in yield2d(nBlocks):
-            bi = int(xy[0]+startBlockC[0]),int(xy[1]+startBlockC[1])
-            newVisibleBlocks.add(bi)
-        
-        appBlocks     = newVisibleBlocks - self.visibleBlocks
-        dissAppBlocks = self.visibleBlocks - newVisibleBlocks
-        self.visibleBlocks = newVisibleBlocks
-
-        if len(self.visibleBlocks)>=25:
-            print "nblocks",nBlocks
-        if dissAppBlocks :
-            self.tileGrid.onTilesDisappear(dissAppBlocks)
-        if appBlocks :
-            self.tileGrid.onTilesAppear(appBlocks)
-
-
-
 
 
 
@@ -86,10 +32,7 @@ class TileGrid(pg.ItemGroup):
         blocking2d = self.mlBlocking.blockings2d[self.viewBox.scrollAxis][blockingIndex]
         self.tileGridManager = orthos_cpp.TileGridManager(blocking2d,tileGridShape, self.viewBox.scrollAxis, self.viewBox.viewAxis)
         self.viewBox.sigRectChanged.connect(self.onViewBoxViewRectChanged)
-
-
         self.tileItems = [TileItemGroup(self.tileShape,self,self.tileGridManager.tileInfo(i)) for i in range(self.nTileItems)]
-        self.tileVisible_ = False
 
 
         # add all tile items to the group
@@ -104,19 +47,13 @@ class TileGrid(pg.ItemGroup):
         self.viewBox.pixelLayers.sigPixelLayerRemoved.connect(self.onRemoveLayer)
 
 
-        # mapping from a tile index to the corresponding tile item index
-        self.tileBlockCoordToTileIndex = dict()
-        self.freeTiles = set()
-        for ti in range(self.nTileItems):
-            self.freeTiles.add(ti)
-        self.usedTiles = set()
-
-        self.initialize()
 
     def onViewBoxViewRectChanged(self):
         minCoord, maxCoord = self.viewBox.integralViewBounds2()
-        print "updateCurrentRoi"
         a,d = self.tileGridManager.updateCurrentRoi(minCoord, maxCoord)
+        self.onTilesDisappear(d)
+        self.onTileAppear(a)
+        
 
     def initialize(self):
         self.visibleTiles = VisibleTiles(self)
@@ -221,7 +158,7 @@ class TileItemGroup(pg.ItemGroup):
     def __getitem__(self, layerName):
         return self.items[layerName]
 
-    
+
     @property
     def tileVisible(self):
         return self.tileInfo.tileVisible
