@@ -133,6 +133,8 @@ void exportTileGrid(){
         "TileGridManager",
         python::init<const Blocking2d &, const Shape2d, size_t,const Shape2d>()
     )
+        .def("updateTimeCoordinate",&TileGridManager::updateTimeCoordinate)
+        .def("updateScrollCoordinate",&TileGridManager::updateScrollCoordinate)
         .def("updateCurrentRoi",vigra::registerConverters(updateCurrentRoi))
         .def("tileInfo",&TileGridManager::tileInfo,python::return_internal_reference<>())
         .def("nVisibleTiles",&TileGridManager::nVisibleTiles)
@@ -141,11 +143,14 @@ void exportTileGrid(){
     ;
 
     python::class_<TileInfo>("TileInfo",python::init<>())
+        .def("copy",&TileInfo::copy)
         .def_readonly("tileVisible", &TileInfo::tileVisible)
         .def_readonly("roi2d", &TileInfo::roi2d)
         .def_readonly("roi3d", &TileInfo::roi3d)
         .def_readonly("scrollCoordinate", &TileInfo::scrollCoordinate)
         .def_readonly("timeCoordinate", &TileInfo::timeCoordinate)
+        .def("__eq__", &TileInfo::operator==)
+        .def("__neq__", &TileInfo::operator!=)
     ;    
 }
 

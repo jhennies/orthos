@@ -50,61 +50,42 @@ class TileGrid(pg.ItemGroup):
 
     def onViewBoxViewRectChanged(self):
         minCoord, maxCoord = self.viewBox.integralViewBounds2()
-        a,d = self.tileGridManager.updateCurrentRoi(minCoord, maxCoord)
-        self.onTilesDisappear(d)
-        self.onTileAppear(a)
-        
+        aTiles,dTiles = self.tileGridManager.updateCurrentRoi(minCoord, maxCoord)
+        if(len(dTiles)>0):
+            #print "dTiles",dTiles
+            self.onTilesDisappear(dTiles)
 
-    def initialize(self):
-        self.visibleTiles = VisibleTiles(self)
-        self.visibleTiles.sigTilesAppeared.connect(self.onTilesAppear)
-        self.visibleTiles.sigTilesDisappeared.connect(self.onTilesDisappear)
+        if(len(aTiles)>0):
+            #print "atiles",aTiles
+            self.onTilesAppear(aTiles)
+
+
 
 
     def onTilesAppear(self, tiles):
-        self.tileVisible_ = True
-        #print len(self.visibleTiles.visibleBlocks),self.nTileItems
-        assert len(self.visibleTiles.visibleBlocks)<=self.nTileItems
-        tileBlockCoordToTileIndex  = self.tileBlockCoordToTileIndex
-        for tileBlockCoord in tiles:
 
-            # nasty mappings
-            assert tileBlockCoord not in self.tileBlockCoordToTileIndex
-            #if len(self.freeTiles) ==0 :
-            #    print self.usedTiles
-            freeTileIndex = self.freeTiles.pop()
-            assert freeTileIndex not in self.usedTiles
-            freeTileItem = self.tileItems[freeTileIndex]
-            self.usedTiles.add(freeTileIndex)
-            self.tileBlockCoordToTileIndex[tileBlockCoord] = freeTileIndex
+        #for ti in range(self.nTileItems):
+        #    print self.tileGridManager.tileInfo(ti).tileVisible()
+        for tileIndex in tiles:
+            tileItem = self.tileItems[tileIndex]
+            assert tileItem.tileInfo.tileVisible
+            #print  tileItem.tileInfo.roi2d.begin
+            tileItem.onTileAppear()
 
-
-            freeTileItem.onTileAppear(tileBlockCoord)
-            #print "tile item scale",freeTileItem.scale()
 
     def onTilesDisappear(self, tiles):
-        self.tileVisible_ = False
-        tileBlockCoordToTileIndex  = self.tileBlockCoordToTileIndex
-        for tileBlockCoord in tiles:
-            assert tileBlockCoord in self.tileBlockCoordToTileIndex
-            usedTileIndex = self.tileBlockCoordToTileIndex.pop(tileBlockCoord)
-            assert usedTileIndex in self.usedTiles
-            assert usedTileIndex not in self.freeTiles
-            usedTileItem = self.tileItems[usedTileIndex]
-            self.usedTiles.remove(usedTileIndex)
-            self.freeTiles.add(usedTileIndex)
-            usedTileItem.onTileDisappear()
+        for tileIndex in tiles:
+            tileItem = self.tileItems[tileIndex]
+            tileItem.onTileDisappear()
 
     def onAddLayer(self, layer):
         #print "tile item group add layer",layer.name()
         self.layers[layer.name()] = layer
         for tileItem in self.tileItems:
             tileGraphicItem = layer.makeTileGraphicsItem()
-            tileGraphicItem.initialize(layer=layer,viewBox=self.viewBox,
-                                       blockingIndex=self.blockingIndex)
+            tileGraphicItem.initialize(layer=layer,tileItemGroup=tileItem)
             tileItem.addLayer(layer.name(),tileGraphicItem)
-            #if self.tileVisible_ :
-            #    self.
+
     def onRemoveLayer(self, layer):
         self.layers[layer.name()] = layer
         for tileItem in self.tileItems:
@@ -112,15 +93,18 @@ class TileGrid(pg.ItemGroup):
         self.layers.pop(layer.name())
 
     def onScrollCoordinateChanged(self, coord):
-        for tileBlockCoord in self.visibleTiles.visibleBlocks:
-            assert tileBlockCoord in self.tileBlockCoordToTileIndex
-            usedTileIndex = self.tileBlockCoordToTileIndex[tileBlockCoord]
-            assert usedTileIndex in self.usedTiles
-            assert usedTileIndex not in self.freeTiles
-            usedTileItem = self.tileItems[usedTileIndex]
-            usedTileItem.onScrollCoordinateChanged(coord)
-            #print "tileBlockCoord",tileBlockCoord
-            #
+        #print "coord set",coord
+        self.tileGridManager.updateScrollCoordinate(coord)
+        for tileIndex in self.tileGridManager.visibleTiles():
+            tileItem = self.tileItems[tileIndex]
+            tileItem.onScrollCoordinateChanged()
+            #print "ne coord",tileItem.scrollCoordinate
+    def onTimeCoordinateChanged(self, coord):
+        self.tileGridManager.updateTimeCoordinate(coord)
+        for tileIndex in self.tileGridManager.visibleTiles():
+            tileItem = self.tileItems[tileIndex]
+            tileItem.onTimeCoordinateChanged()
+
     def yieldVisibleTileItems(self,roi=None):
         if roi is None:
             for tileBlockCoord in self.visibleTiles.visibleBlocks:
@@ -180,34 +164,38 @@ class TileItemGroup(pg.ItemGroup):
     def addLayer(self,name, item):
         self.addItem(item)
         self.items[name]=item
-        if self.tileVisible_:
-            item.onTileAppear(self.blockCoord2d_)
+        #print "add layer",name
+        if self.tileVisible:
+            #print "is tile visible"
+            item.onTileAppear()
+        else:
+            pass
+            #print "noy tile visible"
     def removeLayer(self,name):
         self.removeFromGroup(item)
         self.items.pop(item)
 
-    def onTileAppear(self, gbi):
-        self.tileVisible_ = True
-        self.blockCoord2d_ = gbi
+    def onTileAppear(self):
+        #print "let all layers appear"
         for layerName in self.items:
-            self.items[layerName].onTileAppear(gbi)
+            #print "     layer ",layerName
+            self.items[layerName].onTileAppear()
+
     def onTileDisappear(self):
-        self.tileVisible_ = False
         for layerName in self.items:
             self.items[layerName].onTileDisappear()
 
-    def onScrollCoordinateChanged(self, coord):
+    def onScrollCoordinateChanged(self):
         """ called when scrolled (usually from mouse wheel events)
         """
         # inform all items
         for layerName in self.items:
-            self.items[layerName].onScrollCoordinateChanged(coord)
-            assert self.items[layerName].blockCoord is not None
-    def onTimeCoordinateChanged(self, coord):
+            self.items[layerName].onScrollCoordinateChanged()
+    def onTimeCoordinateChanged(self):
         """ called when current time point changes (usually time-widget)
         """
         for layerName in self.items:
-            self.items[layerName].onTimeCoordinateChanged(coord)
+            self.items[layerName].onTimeCoordinateChanged()
 
 
 

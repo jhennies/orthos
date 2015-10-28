@@ -34,11 +34,11 @@ rawLayer = GrayscaleLayer(name='raw',levels=[0,255],dataSource=rawSource)
 
 
 # labels layer
-f = "/home/tbeier/Desktop/labels_out2.h5"
-labelsSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data',shape=rawSource.shape,
-                                     mode=vigra.HDF5Mode.ReadWrite, compression=vigra.Compression.ZLIB_FAST,
-                                     chunk_shape=[64,64,64],dtype='uint8')
-paintLayer = PaintLayer(name="paint",dataSource=labelsSource)
+#f = "/home/tbeier/Desktop/labels_out2.h5"
+#labelsSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data',shape=rawSource.shape,
+#                                     mode=vigra.HDF5Mode.ReadWrite, compression=vigra.Compression.ZLIB_FAST,
+#                                     chunk_shape=[64,64,64],dtype='uint8')
+#paintLayer = PaintLayer(name="paint",dataSource=labelsSource)
 
 
 
@@ -54,7 +54,7 @@ viewerWidget = LayerViewerWidget(spatialShape=spatialShape, options=opt)
 mw.setCentralWidget(viewerWidget)
 viewerWidget.addLayer(rawLayer)
 #viewerWidget.addLayer(pmapLayer)
-viewerWidget.addLayer(paintLayer)
+#viewerWidget.addLayer(paintLayer)
 viewerWidget.rangeChanged()
 
 def closeCallback():

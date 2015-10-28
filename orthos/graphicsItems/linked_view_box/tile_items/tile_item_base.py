@@ -47,36 +47,64 @@ class UpdateQueue(QtCore.QObject):
         self.futures = stillRunning
         #self.futuresLock.release()
 
+
+
 class TileItemMixIn(object):
     def __init__(self):
         super(TileItemMixIn, self).__init__()
         self.updateQueue = UpdateQueue(self)
         self.layer = None
-        self.viewBox = None
-        self.blockingIndex = None
-        self.blockCoord = (0,0)
-        self.blockings2d = None
-        self.isInit = False
-
-        self.tileVisible_ = False 
         self.layerVisible_ = True
+        self.tileItemGroup = None
 
-    def initialize(self, layer, viewBox, blockingIndex):
+    def initialize(self, layer, tileItemGroup):
         self.isInit = True
         self.layer = layer
-        self.viewBox = viewBox
-        self.blockingIndex = blockingIndex
-        self.blocking2d = viewBox.get2dBlocking(blockingIndex)
-    def onTileAppear(self, blockCoord):
-        self.onChangeTileVisible(True)
-        assert self.isInit
-        self.blockCoord = blockCoord 
+        self.tileItemGroup = tileItemGroup
+
+
+
+    #@property
+    def tileVisible(self):
+        assert self.tileItemGroup is not None
+        return self.tileItemGroup.tileVisible
+    @property
+    def roi2d(self):
+        assert self.tileItemGroup is not None
+        return self.tileItemGroup.roi2d
+    @property
+    def roi3d(self):
+        assert self.tileItemGroup is not None
+        return self.tileItemGroup.roi3d
+    @property
+    def scrollCoordinate(self):
+        assert self.tileItemGroup is not None
+        return self.tileItemGroup.scrollCoordinate
+    @property
+    def timeCoordinate(self):
+        assert self.tileItemGroup is not None
+        return self.tileItemGroup.timeCoordinate
+
+    def tileInfo(self):
+        return self.tileItemGroup.tileInfo
+    
+
+
+
+
+
+
+
+
+
+    def onTileAppear(self):
+        #self.onChangeTileVisible(True)
         self.layer.onTileAppear(self)
-    def blockBeginEnd(self):
-        b = self.blocking2d[self.blockCoord]
-        return b.begin,b.end
-    def onScrollCoordinateChanged(self, coord):
-        self.layer.onTileScrollCoordinateChanged(self,coord)
+
+
+    def onScrollCoordinateChanged(self):
+        self.layer.onTileScrollCoordinateChanged(self)
+
     def onTileDisappear(self):
         self.onChangeTileVisible(False)
         self.layer.onTileDisappear(self)
@@ -84,7 +112,7 @@ class TileItemMixIn(object):
     def onChangeLayerVisible(self, visible):
         self.layerVisible_ = visible
         if visible:
-            if self.tileVisible_:
+            if self.tileVisible():
                 self.setVisible(True)
                 self.setEnabled(True)
             else:
@@ -94,7 +122,6 @@ class TileItemMixIn(object):
             self.setVisible(False)
             self.setEnabled(False)
     def onChangeTileVisible(self, visible):
-        self.tileVisible_ = visible
         if visible :
             if self.layerVisible_:
                 self.setVisible(True)
@@ -106,26 +133,6 @@ class TileItemMixIn(object):
             self.setVisible(False)
             self.setEnabled(False)
 
-    def tileVisible(self):
-        return self.tileVisible_
-
-    @property
-    def timeCoordinate(self):
-        return self.viewBox.timeCoordinate
-    
-
-    def make3dSlicingAndBlockBegin(self):
-        assert self.isInit
-        block = self.blocking2d[self.blockCoord]
-        blockBegin, blockEnd = block.begin,block.end
-        begin3d = self.viewBox.make3DCoordinate(blockBegin)
-        end3d = self.viewBox.make3DCoordinate(blockEnd,1)
-        return make3dSlicing_(begin3d, end3d),blockBegin,blockEnd
-
-    def shape2d(self):
-        block = self.blocking2d[self.blockCoord]
-        blockBegin, blockEnd = block.begin,block.end
-        return tuple([e-b for e,b in zip(blockEnd,blockBegin)])
 
 
 class TileImageItem(pg.ImageItem, TileItemMixIn):
@@ -146,13 +153,14 @@ class TileImageItem(pg.ImageItem, TileItemMixIn):
         if ts >= self.lastStemp:
             #print "FRESH UPDATE"
             self.setNewImageLock.acquire()
-            self.setPos(*updateData.pos)
+            self.setPos(*updateData.tileInfo.roi2d.begin)
             self.lastStemp = ts
             newImg = self.newImgDict.pop(ts)
             self.setImage(newImg,levels=self.layer.levels)
             #print self.levels
             self.setNewImageLock.release()
         else:
+            #print "bad updatre"
             self.setNewImageLock.acquire()
             self.newImgDict.pop(ts)
             self.setNewImageLock.release()
@@ -209,12 +217,10 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
         if ts >= self.lastStemp:
             #print "FRESH UPDATE"
             self.setNewImageLock.acquire()
-            self.setPos(*updateData.pos)
+            self.setPos(*updateData.tileInfo.roi2d.begin)
             self.lastStemp = ts
             newImg = self.newImgDict.pop(ts)
-            #print "DO THE UPDATE"
-            self.setImage(newImg)#,levels=(0,255))
-            #print self.levels
+            self.setImage(newImg)
             self.setNewImageLock.release()
         else:
             self.setNewImageLock.acquire()

@@ -127,9 +127,9 @@ class PixelLayerBase(LayerBase):
 
 
 class UpdateData(object):
-    def __init__(self,data,pos,ts):
+    def __init__(self,data,tileInfo,ts):
         self.data = data
-        self.pos = pos
+        self.tileInfo = tileInfo
         self.ts = ts
 
 
@@ -165,18 +165,21 @@ class GrayscaleLayer(PixelLayerBase):
         self.sigGradientEditorChanged.emit(lut)
 
     def onTileAppear(self, tileItem):
-        spatialSlicing,blockBegin,blockEnd = tileItem.make3dSlicingAndBlockBegin()
-
-        sc = tileItem.viewBox.scrollCoordinate
-        tc = tileItem.viewBox.timeCoordinate
-        def fetchData(ts, spatialSlicing,blockBegin, dataSource,item,sc,tc):
-            nsc = item.viewBox.scrollCoordinate
-            ntc = item.viewBox.timeCoordinate
-            if sc == nsc and tc == ntc and item.tileVisible():
+        def fetchData(item, ts, tileInfo, dataSource):
+            
+            # print item.tileInfo
+            if tileInfo == item.tileInfo():
+                #print "same tile info"
+                begin,end = tileInfo.roi3d.begin, tileInfo.roi3d.end
+                spatialSlicing = [slice(b,e) for b,e in zip(begin,end)]
+                #print spatialSlicing
                 data = dataSource[tuple(spatialSlicing)].squeeze()
                 item.setImageToUpdateFrom(data,ts)
-                d = UpdateData(None,blockBegin,ts)
+                d = UpdateData(None,tileInfo,ts)
                 item.updateQueue.sigUpdateFinished.emit(d)
+            else:
+                pass
+                #print "changed tile info"
 
 
         def onTaskFinished(future, item, blockBegin):
@@ -188,22 +191,23 @@ class GrayscaleLayer(PixelLayerBase):
                 pass
             except RuntimeError as e:
                 print e
-            #item.updateQueue.sigUpdateFinished.emit(blockBegin)
 
+        tileInfo = tileItem.tileInfo().copy()
         ts = time.clock()
-        task = Task(fetchData,ts,spatialSlicing,blockBegin,self.dataSource, tileItem,sc,tc)
-        onF = partial(onTaskFinished,item=tileItem, blockBegin=blockBegin)
-        future = self.threadPool.submit(task=task, onTaskFinished=None)
+        task = Task(fetchData,tileItem, ts, )
+        #onF = partial(onTaskFinished,item=tileItem, tileInfo=tileInfo)
+        #future = self.threadPool.submit(task=task, onTaskFinished=None)
+
+        fetchData(tileItem, ts, tileInfo, self.dataSource) 
 
         # add future to UpdateQueue
-        tileItem.updateQueue.addFuture(future)
+        #tileItem.updateQueue.addFuture(future)
 
 
 
 
 
-    def onTileScrollCoordinateChanged(self, tileItem,coord):
-        assert tileItem.blockCoord is not None
+    def onTileScrollCoordinateChanged(self, tileItem):
         self.onTileAppear(tileItem)
 
     def onTileDisappear(self, tileItem):

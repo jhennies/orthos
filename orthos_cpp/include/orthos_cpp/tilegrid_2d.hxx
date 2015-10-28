@@ -122,6 +122,34 @@ struct TileInfo{
     Block3d roi3d;
     uint64_t scrollCoordinate;
     uint64_t timeCoordinate;
+
+    TileInfo copy()const{
+        return TileInfo(*this);
+    }
+
+    bool operator == (const TileInfo & other){
+        if(
+            other.tileVisible == tileVisible &&
+            other.roi2d == roi2d &&
+            other.scrollCoordinate == scrollCoordinate &&
+            other.timeCoordinate == timeCoordinate
+        ){
+            return true;
+        }
+        return false;
+    }
+
+    bool operator != (const TileInfo & other){
+        if(
+            other.tileVisible == tileVisible &&
+            other.roi2d == roi2d &&
+            other.scrollCoordinate == scrollCoordinate &&
+            other.timeCoordinate == timeCoordinate
+        ){
+            return false;
+        }
+        return true;
+    }
 };
 
 
@@ -139,6 +167,8 @@ public:
         viewAxis_(viewAxis),
         visibleBlocksManager_(blocking2d,tilingShape)
     {
+        timeCoordinate_ = 0;
+        scrollCoordinate_ = 0;
         auto nTiles = tilingShape[0]*tilingShape[1];
         tileInfos_.resize(nTiles);
         for(size_t i=0; i<nTiles; ++i){
@@ -175,8 +205,6 @@ public:
         const auto changed = visibleBlocksManager_.updateCurrentRoi(begin, end, appeared,disappeared);
         
         if(changed){
-            std::cout<<"A "<<appeared.size()<<"\n";
-            std::cout<<"B "<<disappeared.size()<<"\n";
 
             //////////////////////////////////////////////////////////////////////////////
             // map block indexes to tile indexes
@@ -190,7 +218,17 @@ public:
                 usedTileIndexes_.erase(ti);
                 freeTileIndexes_.insert(ti);
 
-                // update tile info
+                auto & tileInfo = tileInfos_[ti];
+                tileInfo.tileVisible = false;
+                bi = ti;
+            }
+            // appear
+            for(auto & bi: appeared){
+                auto ti = *freeTileIndexes_.begin();
+                blockIndexToTileIndex_[bi] = ti;
+                freeTileIndexes_.erase(ti);
+                usedTileIndexes_.insert(ti);
+
                 auto & tileInfo = tileInfos_[ti];
                 tileInfo.tileVisible = true;
                 tileInfo.scrollCoordinate = scrollCoordinate_;
@@ -206,18 +244,6 @@ public:
                 end3d[viewAxis_[1]] = tileInfo.roi2d.end()[1];
 
                 tileInfo.roi3d = Block3d(begin3d, end3d);
-                bi = ti;
-            }
-            // appear
-            for(auto bi: appeared){
-                auto ti = *freeTileIndexes_.begin();
-                blockIndexToTileIndex_[bi] = ti;
-                freeTileIndexes_.erase(ti);
-                usedTileIndexes_.insert(ti);
-
-                // update tile info
-                auto & tileInfo = tileInfos_[ti];
-                tileInfo.tileVisible = false;
                 bi = ti;
             }
         }
@@ -251,13 +277,13 @@ public:
         scrollCoordinate_ = scrollCoordinate;
         for(auto bi : visibleBlocksManager_.visibleBlocks()){
             const auto ti = blockIndexToTileIndex_[bi];
-            auto tileInfo = tileInfos_[ti];
+            auto & tileInfo  = tileInfos_[ti];
             tileInfo.scrollCoordinate = scrollCoordinate_;
 
             Shape3 begin3d = tileInfo.roi3d.begin();
             Shape3 end3d = tileInfo.roi3d.end();
             begin3d[scrollAxis_] = scrollCoordinate_;
-            begin3d[scrollAxis_] = scrollCoordinate_+1;
+            end3d[scrollAxis_] = scrollCoordinate_+1;
             tileInfo.roi3d = Block3d(begin3d, end3d);
         }
     }
