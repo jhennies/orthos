@@ -33,16 +33,16 @@
 /*                                                                      */
 /************************************************************************/
 
-#define PY_ARRAY_UNIQUE_SYMBOL vigranumpyilastiktools_PyArray_API
+#define PY_ARRAY_UNIQUE_SYMBOL vigranumpyorthos_PyArray_API
 //#define NO_IMPORT_ARRAY
 
 // Include this first to avoid name conflicts for boost::tie,
 // similar to issue described in vigra#237
-#include <boost/tuple/tuple.hpp>
+//#include <boost/tuple/tuple.hpp>
 
-/*vigra*/
+/*orthos*/
 #include <orthos_cpp/orthos.hxx>
-
+#include <orthos_cpp/tilegrid_2d.hxx>
 
 /*vigra python */
 #include <vigra/numpy_array.hxx>
@@ -54,10 +54,6 @@ namespace python = boost::python;
 
 
 
-
-class Tiling2d{
-
-};
 
 
 
@@ -95,13 +91,63 @@ applyDrawKernel(
 
 
 
+void exportDrawing(){
+    python::def("applyDrawKernel2d",vigra::registerConverters(&applyDrawKernel))
+    ;
+}
+
+
+
+python::tuple 
+updateCurrentRoi(
+    TileGridManager & tgm,
+    const Float2 & begin,
+    const Float2 & end
+){
+    std::vector<size_t > a,d;
+    tgm.updateCurrentRoi(begin, end, a,d);
+    vigra::NumpyArray<1,uint64_t> an(Shape1(a.size())),dn(Shape1(d.size()));
+    std::copy(a.begin(),a.end(),an.begin());
+    std::copy(d.begin(),d.end(),dn.begin());
+    return python::make_tuple(an,dn);
+}
 
 
 vigra::NumpyAnyArray
-applyDrawKernelOnPath
+visibleBlocks(const TileGridManager &tgm){
+    vigra::NumpyArray<1,uint64_t> vb(Shape1(tgm.nVisibleTiles()));
+    tgm.visibleBlocks(vb.begin(), vb.end());
+    return vb;
+}
+
+vigra::NumpyAnyArray
+visibleTiles(const TileGridManager &tgm){
+    vigra::NumpyArray<1,uint64_t> vb(Shape1(tgm.nVisibleTiles()));
+    tgm.visibleTiles(vb.begin(), vb.end());
+    return vb;
+}
 
 
+void exportTileGrid(){
+    python::class_<TileGridManager>(
+        "TileGridManager",
+        python::init<const Blocking2d &, const Shape2d, size_t,const Shape2d>()
+    )
+        .def("updateCurrentRoi",vigra::registerConverters(updateCurrentRoi))
+        .def("tileInfo",&TileGridManager::tileInfo,python::return_internal_reference<>())
+        .def("nVisibleTiles",&TileGridManager::nVisibleTiles)
+        .def("visibleBlocks",vigra::registerConverters(&visibleBlocks))
+        .def("visibleTiles",vigra::registerConverters(&visibleTiles))
+    ;
 
+    python::class_<TileInfo>("TileInfo",python::init<>())
+        .def_readonly("tileVisible", &TileInfo::tileVisible)
+        .def_readonly("roi2d", &TileInfo::roi2d)
+        .def_readonly("roi3d", &TileInfo::roi3d)
+        .def_readonly("scrollCoordinate", &TileInfo::scrollCoordinate)
+        .def_readonly("timeCoordinate", &TileInfo::timeCoordinate)
+    ;    
+}
 
 
 
@@ -110,8 +156,11 @@ BOOST_PYTHON_MODULE_INIT(_orthos_cpp)
     vigra::import_vigranumpy();
 
     python::docstring_options doc_options(true, true, false);
-    python::def("applyDrawKernel2d",vigra::registerConverters(&applyDrawKernel))
-    ;
+
+
+    exportDrawing();
+    exportTileGrid();
+
 }
 
 

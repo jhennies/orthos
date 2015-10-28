@@ -8,6 +8,24 @@ ELSE()
    SET(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.")
 ENDIF()
 
+
+# include(CheckCXXCompilerFlag)
+# CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+# CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
+# if(COMPILER_SUPPORTS_CXX11)
+#     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+# elseif(COMPILER_SUPPORTS_CXX0X)
+#     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
+# else()
+#         message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
+# endif()
+
+
+ADD_DEFINITIONS(
+    -std=c++11 # Or -std=c++0x
+    # Other flags
+)
+
 #-------------------------------------------------------------------------------------------------------------------
 # Inferno
 #-------------------------------------------------------------------------------------------------------------------
@@ -18,10 +36,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
 include(ILASTIKTOOLS_ADD_NUMPY_MODULE)
 
 
-project(inferos)
-set (ILASTIKTOOLS_VERSION_MAJOR 0)
-set (ILASTIKTOOLS_VERSION_MINOR 2)
-set (ILASTIKTOOLS_VERSION_PATCH 1)
+project(orthos_cpp)
+set (ORTHOS_CPP_VERSION_MAJOR 0)
+set (ORTHOS_CPP_VERSION_MINOR 2)
+set (ORTHOS_CPP_VERSION_PATCH 0)
 
 
 

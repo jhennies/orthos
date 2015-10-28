@@ -3,6 +3,7 @@ import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
 from operator import mul
 
+import orthos_cpp
 
 def iYield2d(shape):
     i = 0 
@@ -86,6 +87,15 @@ class TileGrid(pg.ItemGroup):
             self.addItem(tileItem)
 
 
+
+        # cpp 
+        blocking2d = self.mlBlocking.blockings2d[self.viewBox.scrollAxis][blockingIndex]
+        self.tileGridManager = orthos_cpp.TileGridManager(blocking2d,tileGridShape, self.viewBox.scrollAxis, self.viewBox.viewAxis)
+
+        self.viewBox.sigRectChanged.connect(self.onViewBoxViewRectChanged)
+
+
+
         # LAYERS 
         # connect the layer class with the tile grid
         self.layers = dict()
@@ -101,6 +111,11 @@ class TileGrid(pg.ItemGroup):
         self.usedTiles = set()
 
         self.initialize()
+
+    def onViewBoxViewRectChanged(self):
+        minCoord, maxCoord = self.viewBox.integralViewBounds2()
+        print "updateCurrentRoi"
+        a,d = self.tileGridManager.updateCurrentRoi(minCoord, maxCoord)
 
     def initialize(self):
         self.visibleTiles = VisibleTiles(self)

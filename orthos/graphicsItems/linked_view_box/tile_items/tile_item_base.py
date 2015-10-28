@@ -73,7 +73,8 @@ class TileItemMixIn(object):
         self.blockCoord = blockCoord 
         self.layer.onTileAppear(self)
     def blockBeginEnd(self):
-        return  self.blocking2d[self.blockCoord]
+        b = self.blocking2d[self.blockCoord]
+        return b.begin,b.end
     def onScrollCoordinateChanged(self, coord):
         self.layer.onTileScrollCoordinateChanged(self,coord)
     def onTileDisappear(self):
