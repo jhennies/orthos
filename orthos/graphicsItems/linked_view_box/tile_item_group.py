@@ -79,22 +79,23 @@ class TileGrid(pg.ItemGroup):
         self.mlBlocking = viewBox.navigator.mlBlocking
         self.tileShape = self.mlBlocking.blockShape2d(blockingIndex,self.scrollAxis)
         self.nTileItems = tileGridShape[0]*tileGridShape[1]
-        self.tileItems = [TileItemGroup(self.tileShape,self) for i in range(self.nTileItems)]
-        self.tileVisible_ = False
-        # add all tile items to the group
-        for tileItem in self.tileItems:
-            tileItem.setPos(0,0)
-            self.addItem(tileItem)
-
-
+        
+  
 
         # cpp 
         blocking2d = self.mlBlocking.blockings2d[self.viewBox.scrollAxis][blockingIndex]
         self.tileGridManager = orthos_cpp.TileGridManager(blocking2d,tileGridShape, self.viewBox.scrollAxis, self.viewBox.viewAxis)
-
         self.viewBox.sigRectChanged.connect(self.onViewBoxViewRectChanged)
 
 
+        self.tileItems = [TileItemGroup(self.tileShape,self,self.tileGridManager.tileInfo(i)) for i in range(self.nTileItems)]
+        self.tileVisible_ = False
+
+
+        # add all tile items to the group
+        for i,tileItem in enumerate(self.tileItems):
+            tileItem.setPos(0,0)
+            self.addItem(tileItem)
 
         # LAYERS 
         # connect the layer class with the tile grid
@@ -209,7 +210,8 @@ class TileItemGroup(pg.ItemGroup):
     """ A Container of all Graphics Items in a single(!) 2d-tile
     """
 
-    def __init__(self, tileShape,parent):
+    def __init__(self, tileShape,parent, tileInfo):
+        self.tileInfo = tileInfo
         super(TileItemGroup,self).__init__()
         self.tileShape = tileShape
         self.items = dict()
@@ -218,6 +220,25 @@ class TileItemGroup(pg.ItemGroup):
 
     def __getitem__(self, layerName):
         return self.items[layerName]
+
+    
+    @property
+    def tileVisible(self):
+        return self.tileInfo.tileVisible
+    @property
+    def roi2d(self):
+        return self.tileInfo.roi2d
+    @property
+    def roi3d(self):
+        return self.tileInfo.roi3d
+    @property
+    def scrollCoordinate(self):
+        return self.tileInfo.scrollCoordinate
+    @property
+    def timeCoordinate(self):
+        return self.tileInfo.timeCoordinate
+
+
 
     def addLayer(self,name, item):
         self.addItem(item)
