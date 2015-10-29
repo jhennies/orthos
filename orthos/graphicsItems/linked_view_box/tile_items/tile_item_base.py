@@ -92,22 +92,25 @@ class TileItemMixIn(object):
 
 
 
-
-
-
-
-
-    def onTileAppear(self):
-        #self.onChangeTileVisible(True)
+    def onTileUpdate(self):
         self.layer.onTileAppear(self)
 
-
-    def onScrollCoordinateChanged(self):
-        self.layer.onTileScrollCoordinateChanged(self)
+    def onTileAppear(self):
+        self.onChangeTileVisible(True)
+        self.layer.onTileAppear(self)
 
     def onTileDisappear(self):
         self.onChangeTileVisible(False)
         self.layer.onTileDisappear(self)
+
+    def onScrollCoordinateChanged(self):
+        self.layer.onScrollCoordinateChanged(self)
+
+    def onTimeCoordinateChanged(self):
+        self.layer.onTimeCoordinateChanged(self)
+
+
+
 
     def onChangeLayerVisible(self, visible):
         self.layerVisible_ = visible
@@ -121,6 +124,7 @@ class TileItemMixIn(object):
         else:
             self.setVisible(False)
             self.setEnabled(False)
+
     def onChangeTileVisible(self, visible):
         if visible :
             if self.layerVisible_:
@@ -194,8 +198,9 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
         self.pathItem = pg.PlotCurveItem()
         
 
-    def initialize(self, layer, viewBox, blockingIndex):
-        TileItemMixIn.initialize(self,layer,viewBox,blockingIndex)
+    def initialize(self, layer, tileItemGroup):
+        TileItemMixIn.initialize(self, layer, tileItemGroup)
+        self.viewBox = tileItemGroup.viewBox
         self.viewBox.addItem(self.pathItem)
 
     def onLabelChanged(self, label):
@@ -212,20 +217,22 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
     def onUpdateFinished(self, updateData):
         #print "update finished",updateData.pos
         ts = updateData.ts
-        #print ts
-        #print "own ts",self.lastStemp,"update ts",ts
         if ts >= self.lastStemp:
-            #print "FRESH UPDATE"
             self.setNewImageLock.acquire()
             self.setPos(*updateData.tileInfo.roi2d.begin)
             self.lastStemp = ts
             newImg = self.newImgDict.pop(ts)
-            self.setImage(newImg)
+            self.setImage(newImg)#,levels=self.layer.levels)
             self.setNewImageLock.release()
         else:
             self.setNewImageLock.acquire()
             self.newImgDict.pop(ts)
             self.setNewImageLock.release()
+
+    def setImageToUpdateFrom(self, newImage, ts):
+        self.setNewImageLock.acquire()
+        self.newImgDict[ts] = newImage.copy()
+        self.setNewImageLock.release()
 
     def setImageToUpdateFrom(self, newImage, ts):
         self.setNewImageLock.acquire()
@@ -244,18 +251,18 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
 
     def mouseDragEvent(self, ev, axis=None):
         kmods = ev.modifiers()
-        s2d = self.shape2d()
+        s2d = self.roi2d.shape
         if  ev.button() == QtCore.Qt.LeftButton and (kmods == pg.QtCore.Qt.NoModifier): #and (noShift and noCtrl):
             
             pos = ev.pos()
-            begin,end = self.blockBeginEnd()
+            begin,end = self.roi2d.begin, self.roi2d.end
             pos = pos.x()+begin[0],pos.y()+begin[1]
             
             print pos
             if True:#pos[0]>=0 and pos[0]<s2d[0] and pos[1]>=0 and pos[1]<s2d[1]:
                 ev.accept()
 
-                c = self.labelColors[self.label]
+                c = tuple(self.labelColors[self.label])+(75,)
                 w = (self.brushRad*2+1)/self.viewBox.viewPixelSize()[0]
                 self.pathItem.setPen(pg.mkPen(color=c,width=w))
 
@@ -280,7 +287,7 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
 
 
     def makeArrayFromPath(self):
-        begin,end = self.blockBeginEnd()
+        begin,end  = self.roi2d.begin, self.roi2d.end
 
         npx = numpy.array(self.pathX)
         npy = numpy.array(self.pathY)
@@ -296,7 +303,8 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
         startCoord = numpy.floor(numpy.array([numpy.min(npx),numpy.min(npy)])).astype('int64')
         stopCoord  = numpy.round(numpy.array([numpy.max(npx)+1,numpy.max(npy)+1]),0).astype('int64')
 
-
+        startCoord -= self.brushRad + 1
+        stopCoord  += self.brushRad + 1
 
         shape = stopCoord - startCoord
         shape = [int(s) for s in shape]
@@ -315,8 +323,8 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
             #print i
             x0,y0 = npx[i],npy[i]
             x1,y1 = npx[i+1],npy[i+1]
-            dist = numpy.sqrt( (x0-x1)**2 + (y0-y1)**2)
-            num = max(int(dist +0.5),1)
+            dist = numpy.abs(x0-x1) + numpy.abs(y0-y1)
+            num = max(int(dist +0.5),10)*5
             #print "NUM:",dist
             
 
@@ -327,10 +335,8 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
             y -= startCoord[1]
             labelsBlock[x,y] = 1
 
-        dLabels = vigra.filters.discDilation(labelsBlock, self.brushRad)
 
         # make draw kernel
-    
         drawKernel = numpy.ones((2*self.brushRad+1,)*2,dtype='uint8')
         drawKernel = sector_mask(self.brushRad)
         print drawKernel

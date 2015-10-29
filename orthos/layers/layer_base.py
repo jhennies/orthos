@@ -31,6 +31,17 @@ class Arbitrary2dBlockRequest(LayerRequestBase):
 
 
 
+def noErrorIfTaskCanceled(future):
+    try:
+        exp =  future.exception()
+        if exp is not None:
+           raise exp
+    except concurrent.futures.CancelledError:
+        pass
+    except RuntimeError as e:
+        print e
+
+
 class LayerBase(QtCore.QObject):
 
 
@@ -108,11 +119,16 @@ class LayerBase(QtCore.QObject):
     def layerZValue(self):
         return self.layerZValue_
 
-
-    def onTileAppear(self, tileItem, bi):
-        raise RuntimeError("not implemented")
+    def onTileUpdate(self, tileItem):
+        raise RuntimeError("Needs to be implemented by derived class")
+    def onTileAppear(self, tileItem):
+        self.onTileUpdate(tileItem)
     def onTileDisappear(self, tileItem):
-        raise RuntimeError("not implemented")
+        pass
+    def onScrollCoordinateChanged(self, tileItem):
+        self.onTileUpdate(tileItem)
+    def onScrollCoordinateChanged(self, tileItem):
+        self.onTileUpdate(tileItem)
 
 
 class PixelLayerBase(LayerBase):
@@ -127,8 +143,7 @@ class PixelLayerBase(LayerBase):
 
 
 class UpdateData(object):
-    def __init__(self,data,tileInfo,ts):
-        self.data = data
+    def __init__(self,tileInfo,ts):
         self.tileInfo = tileInfo
         self.ts = ts
 
@@ -164,57 +179,23 @@ class GrayscaleLayer(PixelLayerBase):
         lut = gi.getLookupTable(256)
         self.sigGradientEditorChanged.emit(lut)
 
-    def onTileAppear(self, tileItem):
+    def onTileUpdate(self, tileItem):
+
         def fetchData(item, ts, tileInfo, dataSource):
-            
-            # print item.tileInfo
             if tileInfo == item.tileInfo():
-                #print "same tile info"
-                begin,end = tileInfo.roi3d.begin, tileInfo.roi3d.end
-                spatialSlicing = [slice(b,e) for b,e in zip(begin,end)]
-                #print spatialSlicing
-                data = dataSource[tuple(spatialSlicing)].squeeze()
+                data = dataSource[tileInfo.slicing3d()].squeeze()
                 item.setImageToUpdateFrom(data,ts)
-                d = UpdateData(None,tileInfo,ts)
+                d = UpdateData(tileInfo,ts)
                 item.updateQueue.sigUpdateFinished.emit(d)
-            else:
-                pass
-                #print "changed tile info"
 
 
-        def onTaskFinished(future, item, blockBegin):
-            try:
-                exp =  future.exception()
-                if exp is not None:
-                   raise exp
-            except concurrent.futures.CancelledError:
-                pass
-            except RuntimeError as e:
-                print e
-
+        # add task to pool
         tileInfo = tileItem.tileInfo().copy()
         ts = time.clock()
-        task = Task(fetchData,tileItem, ts, )
-        #onF = partial(onTaskFinished,item=tileItem, tileInfo=tileInfo)
-        #future = self.threadPool.submit(task=task, onTaskFinished=None)
-
-        fetchData(tileItem, ts, tileInfo, self.dataSource) 
-
-        # add future to UpdateQueue
-        #tileItem.updateQueue.addFuture(future)
-
-
-
-
-
-    def onTileScrollCoordinateChanged(self, tileItem):
-        self.onTileAppear(tileItem)
-
-    def onTileDisappear(self, tileItem):
-        #print self.name(),"disappear"
-        pass
-
-
+        task = Task(fetchData,tileItem, ts,tileInfo, self.dataSource)
+        future = self.threadPool.submit(task=task, onTaskFinished=noErrorIfTaskCanceled)
+        # add future to queue
+        tileItem.updateQueue.addFuture(future)
 
     def mouseClickEvent(self, ev, pos2d, clickedViewBox):
         print "layer",self.name(),"clicked at",pos2d
@@ -267,62 +248,39 @@ class PaintLayer(PixelLayerBase):
 
 
 
-    def onTileAppear(self, tileItem):
-        spatialSlicing,blockBegin,blockEnd = tileItem.make3dSlicingAndBlockBegin()
-        tileItem.setPos(*blockBegin)
-
-        #s2d = tileItem.shape2d()
-        #imgShape = s2d + (3,)
-        #dataRGBA = numpy.zeros(imgShape,dtype='uint8')
+    def onTileUpdate(self, tileItem):
 
 
-
-        sc = tileItem.viewBox.scrollCoordinate
-        tc = tileItem.viewBox.timeCoordinate
-        def fetchData(ts, spatialSlicing,blockBegin, dataSource,item,sc,tc):
-            nsc = item.viewBox.scrollCoordinate
-            ntc = item.viewBox.timeCoordinate
-            if sc == nsc and tc == ntc and item.tileVisible():
-                data = dataSource[tuple(spatialSlicing)].squeeze()
-                whereLabels = numpy.where(data!=0)
-                #print whereLabels
-
-                s2d = item.shape2d()
-                imgShape = s2d + (4,)
-
-
+        def fetchData(item, ts, tileInfo, dataSource):
+            if tileInfo == item.tileInfo():
+                data = dataSource[tileInfo.slicing3d()].squeeze()
+                dataRGBA = numpy.zeros(tileInfo.roi2d.shape+(4,) ,dtype='uint8')
                 lut = numpy.array(self.labelColors)
-                dataRGBA = numpy.zeros(imgShape,dtype='uint8')
                 dataRGBA[:,:,0:3] = numpy.take(lut, data, axis=0, mode='clip') 
                 dataA   = dataRGBA[:,:,3] 
-                #dataRGB[whereLabels] = 255,255,255
-                dataA[whereLabels] = 255
+                dataA[numpy.where(data!=0)] = 255
                 item.setImageToUpdateFrom(dataRGBA,ts)
-                d = UpdateData(None,blockBegin,ts)
+                d = UpdateData(tileInfo,ts)
                 item.updateQueue.sigUpdateFinished.emit(d)
-        def onTaskFinished(future):#, item, blockBegin):
-            try:
-                exp =  future.exception()
-                if exp is not None:
-                   raise exp
-            except concurrent.futures.CancelledError:
-                pass
-            except RuntimeError as e:
-                print e
-            #item.updateQueue.sigUpdateFinished.emit(blockBegin)
+    
+
+        # add task to pool
+        tileInfo = tileItem.tileInfo().copy()
         ts = time.clock()
-        task = Task(fetchData,ts,spatialSlicing,blockBegin,self.dataSource, tileItem,sc,tc)
-        onF = partial(onTaskFinished,item=tileItem, blockBegin=blockBegin)
-        future = self.threadPool.submit(task=task, onTaskFinished=onTaskFinished)
-        # add future to UpdateQueue
+        task = Task(fetchData,tileItem, ts,tileInfo, self.dataSource)
+        future = self.threadPool.submit(task=task, onTaskFinished=noErrorIfTaskCanceled)
+        # add future to queue
         tileItem.updateQueue.addFuture(future)
+
 
 
     def writeLabelsToDataSource(self, labelsBlock, labelsBlockBegin):
         
         slicing = [ ]
+        labelsBlockEnd = [0,0,0]
         for i in range(3):
             s =slice(labelsBlockBegin[i],labelsBlockBegin[i]+labelsBlock.shape[i])
+            labelsBlockEnd[i] = labelsBlockBegin[i]+labelsBlock.shape[i]
             slicing.append(s)
         
         whereLabels = numpy.where(labelsBlock!=0)
@@ -338,18 +296,10 @@ class PaintLayer(PixelLayerBase):
         newLabels[newLabels==255] = 0
         self.dataSource.commitSubarray(labelsBlockBegin,newLabels)
 
-        #self.dataSource.chunkedArray.flush()
-    
+        
+        for tileGrid in self.viewer.yieldTileGrids():
+            tileGrid.updateTiles(roi3D=(labelsBlockBegin,labelsBlockEnd))
 
-
-
-    def onTileScrollCoordinateChanged(self, tileItem,coord):
-        assert tileItem.blockCoord is not None
-        self.onTileAppear(tileItem)
-
-    def onTileDisappear(self, tileItem):
-        #print self.name(),"disappear"
-        pass
 
 
 
@@ -371,9 +321,11 @@ class PixelLayers(QtCore.QObject):
     def __init__(self):
         super(PixelLayers,self).__init__()
         self.layers = OrderedDict()
+        self.viewer = None
 
     def addLayer(self, layer):
         self.layers[layer.name()] = layer
+        layer.viewer = self.viewer
         self.sigPixelLayerAdded.emit(layer)
 
     def removeLayer(self, layer):

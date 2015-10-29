@@ -128,6 +128,34 @@ visibleTiles(const TileGridManager &tgm){
 }
 
 
+
+vigra::NumpyAnyArray
+visibleTilesInRoi2D(
+    const TileGridManager &tgm,
+    const Shape2 & roiBegin,
+    const Shape2 & roiEnd
+){
+    const auto vt = tgm.visibleTilesInRoi2D(roiBegin, roiEnd);
+    vigra::NumpyArray<1,uint64_t> vta(Shape1(vt.size()));
+    std::copy(vt.begin(),vt.end(),vta.begin());
+    return vta;
+}
+
+vigra::NumpyAnyArray
+visibleTilesInRoi3D(
+    const TileGridManager &tgm,
+    const Shape3 & roiBegin,
+    const Shape3 & roiEnd
+){
+    const auto vt = tgm.visibleTilesInRoi3D(roiBegin, roiEnd);
+    vigra::NumpyArray<1,uint64_t> vta(Shape1(vt.size()));
+    std::copy(vt.begin(),vt.end(),vta.begin());
+    return vta;
+}
+
+
+
+
 void exportTileGrid(){
     python::class_<TileGridManager>(
         "TileGridManager",
@@ -140,6 +168,8 @@ void exportTileGrid(){
         .def("nVisibleTiles",&TileGridManager::nVisibleTiles)
         .def("visibleBlocks",vigra::registerConverters(&visibleBlocks))
         .def("visibleTiles",vigra::registerConverters(&visibleTiles))
+        .def("visibleTilesInRoi2D",vigra::registerConverters(&visibleTilesInRoi2D))
+        .def("visibleTilesInRoi3D",vigra::registerConverters(&visibleTilesInRoi3D))
     ;
 
     python::class_<TileInfo>("TileInfo",python::init<>())

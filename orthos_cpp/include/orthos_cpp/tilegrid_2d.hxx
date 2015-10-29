@@ -4,6 +4,12 @@
 #include <vector>
 #include <algorithm>
 #include <iterator>
+#include <cstdint>
+#include <stdexcept>
+#include <sstream>
+#include <limits>
+#include <cmath>
+
 
 typedef vigra::MultiBlocking<2> Blocking2d;
 typedef typename Blocking2d::Shape Shape2d;
@@ -11,6 +17,7 @@ typedef typename Blocking2d::Block Block2d;
 typedef vigra::TinyVector<float, 2> Float2;
 
 typedef vigra::TinyVector<int64_t, 1> Shape1;
+typedef vigra::TinyVector<int64_t, 2> Shape2;
 typedef vigra::TinyVector<int64_t, 3> Shape3;
 typedef vigra::Box<int64_t, 3> Block3d;
 /**
@@ -18,6 +25,53 @@ typedef vigra::Box<int64_t, 3> Block3d;
  *             disappeared block indexes after
  *             a roi update via updateCurrentRoi
  */
+
+
+
+#define ORTHOS_CHECK_OP(a,op,b,message) \
+    if(!  static_cast<bool>( a op b )   ) { \
+       std::stringstream s; \
+       s << "Inferno Error: "<< message <<"\n";\
+       s << "Inferno check :  " << #a <<#op <<#b<< "  failed:\n"; \
+       s << #a " = "<<a<<"\n"; \
+       s << #b " = "<<b<<"\n"; \
+       s << "in file " << __FILE__ << ", line " << __LINE__ << "\n"; \
+       throw std::runtime_error(s.str()); \
+    }
+
+/** \def INFERNO_CHECK(expression,message)
+    \brief macro for runtime checks
+    
+    \warning The check is done 
+        <B> even in Release mode </B> 
+        (therefore if NDEBUG <B>is</B> defined)
+
+    \param expression : expression which can evaluate to bool
+    \param message : error message (as "my error")
+
+    <b>Usage:</b>
+    \code
+        int a = 1;
+        INFERNO_CHECK_OP(a==1, "this should never fail")
+        INFERNO_CHECK_OP(a>=2, "this should fail")
+    \endcode
+*/
+#define ORTHOS_CHECK(expression,message) if(!(expression)) { \
+   std::stringstream s; \
+   s << message <<"\n";\
+   s << "Inferno assertion " << #expression \
+   << " failed in file " << __FILE__ \
+   << ", line " << __LINE__ << std::endl; \
+   throw std::runtime_error(s.str()); \
+ }
+
+
+
+
+
+
+
+
 
 
 
@@ -47,6 +101,33 @@ public:
         visibleBlocks_.clear();
     }   
 
+    std::vector<size_t> intersectingBlocks(
+        const Shape2 & begin, 
+        const Shape2 & end
+    ){
+
+        std::vector<size_t>  iBlocks;
+
+        Shape2 bbegin = begin/blocking2d_.blockShape();
+        const Block2d testBlock(begin, end);
+
+        vigra::MultiCoordinateIterator<2> iter(tilingShape_);
+        vigra::MultiCoordinateIterator<2> endIter(iter.getEndIterator());
+
+        for(; iter!=endIter; ++iter){
+            const Shape2 coord(*iter);
+            const Shape2 blockCoord = coord + bbegin;
+            const Block2d block =  blocking2d_.blockDescToBlock(blockCoord);
+            if(testBlock.intersects(block)){
+                int bi = blockCoord[0] + blockCoord[1]*blocking2d_.blocksPerAxis()[0];
+                iBlocks.push_back(bi);
+            }
+        }
+        return std::move(iBlocks);
+    }
+
+
+
     /**
      * @brief      update the current roi
      *
@@ -64,8 +145,10 @@ public:
         const Float2 & end,
         std::vector<size_t> & appeared,
         std::vector<size_t> & disappeared
-    ){
-        const auto iblocks = blocking2d_.intersectingBlocks(begin, end);
+    ){  
+
+        //const auto iblocks = blocking2d_.intersectingBlocks(begin, end);
+        const auto iblocks = intersectingBlocks(begin, end);
         std::set<size_t> newVB(iblocks.begin(), iblocks.end());
 
         std::set<size_t> a,d;
@@ -153,6 +236,12 @@ struct TileInfo{
 };
 
 
+
+template<class C, class KEY>
+bool hasKey(const C & c, const KEY & key){
+    return c.find(key)!=c.end();
+}
+
 class TileGridManager{
 public:
     TileGridManager(
@@ -179,11 +268,12 @@ public:
     }
 
     const TileInfo & tileInfo(const size_t ti)const{
+        ORTHOS_CHECK_OP(ti,<,tileInfos_.size(),"");
         return tileInfos_[ti];
     }
 
     /**
-     * @brief      update the current roi
+     * @brief      update the current rofreeTileIndexes_i
      *
      * @param[in]  begin        left upper corner of visible part
      * @param[in]  end          right lower corner of visible part
@@ -213,9 +303,13 @@ public:
             // disappear
             for(auto & bi  : disappeared){
                 auto iter = blockIndexToTileIndex_.find(bi);
+                ORTHOS_CHECK(iter!=blockIndexToTileIndex_.end(),"");
                 const auto ti = iter->second;
                 blockIndexToTileIndex_.erase(iter);
+
+                ORTHOS_CHECK(hasKey(usedTileIndexes_,ti),"");
                 usedTileIndexes_.erase(ti);
+                ORTHOS_CHECK(!hasKey(freeTileIndexes_,ti),"");
                 freeTileIndexes_.insert(ti);
 
                 auto & tileInfo = tileInfos_[ti];
@@ -224,10 +318,25 @@ public:
             }
             // appear
             for(auto & bi: appeared){
+                ORTHOS_CHECK_OP(freeTileIndexes_.size(),>,0,"");
                 auto ti = *freeTileIndexes_.begin();
-                blockIndexToTileIndex_[bi] = ti;
+
+
+                //std::cout<<"ti "<<ti<<"\n";
+                //for(auto inSet : freeTileIndexes_){
+                //    std::cout<<"   ti "<<inSet<<"\n";
+                //}
+
+                ORTHOS_CHECK(hasKey(freeTileIndexes_,ti),"");
                 freeTileIndexes_.erase(ti);
+
+                ORTHOS_CHECK(!hasKey(usedTileIndexes_,ti),"");
                 usedTileIndexes_.insert(ti);
+
+                ORTHOS_CHECK(blockIndexToTileIndex_.find(bi)==blockIndexToTileIndex_.end(),"");
+                blockIndexToTileIndex_[bi] = ti;
+
+      
 
                 auto & tileInfo = tileInfos_[ti];
                 tileInfo.tileVisible = true;
@@ -270,6 +379,58 @@ public:
             ++begin;
         }
     }
+
+
+    std::vector<size_t> 
+    visibleBlocksInRoi(
+        Shape2d roiBegin,
+        Shape2d roiEnd
+    )const{
+        std::vector<size_t> visibleBlocks;
+        const Block2d testBlock(roiBegin, roiEnd);
+        for(const auto bi : visibleBlocksManager_.visibleBlocks()){
+            const auto block = blocking2d_.blockBegin()[bi];
+            if(testBlock.intersects(block)){
+                visibleBlocks.push_back(bi);
+            }
+        }
+        return std::move(visibleBlocks);
+    }
+
+    std::vector<size_t> 
+    visibleTilesInRoi2D(
+        Shape2d roiBegin,
+        Shape2d roiEnd
+    )const{
+        std::vector<size_t> visibleTiles;
+        const Block2d testBlock(roiBegin, roiEnd);
+        for(const auto bi : visibleBlocksManager_.visibleBlocks()){
+            const auto block = blocking2d_.blockBegin()[bi];
+            if(testBlock.intersects(block)){
+                const auto ti = blockIndexToTileIndex_.find(bi)->second;
+                visibleTiles.push_back(ti);
+            }
+        }
+        return std::move(visibleTiles);
+    }
+
+
+    std::vector<size_t> 
+    visibleTilesInRoi3D(
+        Shape3 roiBegin,
+        Shape3 roiEnd
+    )const{
+       if(roiBegin[scrollAxis_]<= scrollCoordinate_ && scrollCoordinate_<roiEnd[scrollAxis_]){
+            const Shape2d roiBegin2D(roiBegin[viewAxis_[0]], roiBegin[viewAxis_[1]]);
+            const Shape2d roiEnd2D(roiEnd[viewAxis_[0]], roiEnd[viewAxis_[1]]);
+            return visibleTilesInRoi2D(roiBegin2D, roiEnd2D);
+       }
+       else{
+            std::vector<size_t> res;
+            return std::move(res);
+       }
+    }
+
 
 
 

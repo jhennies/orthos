@@ -14,10 +14,16 @@ class VigraChunkedArrayHdf5(ArrayDataSourceBase):
 
     def __getitem__(self,key):
         return self.chunkedArray[key]
+
+
     def commitSubarray(self,start,val):
         print start
         print val.shape, val.dtype
         self.chunkedArray.commitSubarray(start,val)
+
+    def checkoutSubarray(self, start,stop):
+        return self.chunkedArray.checkoutSubarray(start,stop)
+
 
     def flushToDisk(self):
         print "CLOSE THAT ARRAY"

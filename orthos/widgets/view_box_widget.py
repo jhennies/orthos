@@ -66,9 +66,9 @@ class Navigator(object):
                     #vb.setRange(xRange=(sX,sX+2.0*rX))
                     #vb.setRange(yRange=(sY,sY+2.0*rY))
     def onTimeChanged(self, newTime):
-        print "time changed to",newTime
         for vbw in self.viewBoxWidgets:
             vbw.viewBox.onTimeChanged(newTime)
+            
 def linked3dViewBoxWidgets(spatialShape, nTimePoints, options):
 
     pixelLayers = PixelLayers()

@@ -58,6 +58,7 @@ class LayerViewerWidget(QtGui.QWidget):
         self.renderWidget = res[1]
         self.navigator = res[2]
         self.pixelLayers = res[3]
+        self.pixelLayers.viewer = self
         self.layersCtrlWidget = res[4]
         self.timeCtrlWidget = res[5]
         self.timeCtrlDock = None
@@ -102,6 +103,14 @@ class LayerViewerWidget(QtGui.QWidget):
             self.timeCtrlDock.widgetArea.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
             self.timeCtrlWidget.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
             self.timeCtrlDock.addWidget(self.timeCtrlWidget)
+
+    def yieldViewBoxes(self):
+        for vbw in self.viewBoxWidgets:
+            yield vbw.viewBox
+
+    def yieldTileGrids(self):
+        for vbw in self.viewBoxWidgets:
+            yield vbw.viewBox.tileGrid
 
 
     # handle key events

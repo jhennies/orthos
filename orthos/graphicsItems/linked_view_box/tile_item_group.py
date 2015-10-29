@@ -32,7 +32,7 @@ class TileGrid(pg.ItemGroup):
         blocking2d = self.mlBlocking.blockings2d[self.viewBox.scrollAxis][blockingIndex]
         self.tileGridManager = orthos_cpp.TileGridManager(blocking2d,tileGridShape, self.viewBox.scrollAxis, self.viewBox.viewAxis)
         self.viewBox.sigRectChanged.connect(self.onViewBoxViewRectChanged)
-        self.tileItems = [TileItemGroup(self.tileShape,self,self.tileGridManager.tileInfo(i)) for i in range(self.nTileItems)]
+        self.tileItems = [TileItemGroup(self.viewBox, self.tileGridManager.tileInfo(i)) for i in range(self.nTileItems)]
 
 
         # add all tile items to the group
@@ -61,23 +61,6 @@ class TileGrid(pg.ItemGroup):
 
 
 
-
-    def onTilesAppear(self, tiles):
-
-        #for ti in range(self.nTileItems):
-        #    print self.tileGridManager.tileInfo(ti).tileVisible()
-        for tileIndex in tiles:
-            tileItem = self.tileItems[tileIndex]
-            assert tileItem.tileInfo.tileVisible
-            #print  tileItem.tileInfo.roi2d.begin
-            tileItem.onTileAppear()
-
-
-    def onTilesDisappear(self, tiles):
-        for tileIndex in tiles:
-            tileItem = self.tileItems[tileIndex]
-            tileItem.onTileDisappear()
-
     def onAddLayer(self, layer):
         #print "tile item group add layer",layer.name()
         self.layers[layer.name()] = layer
@@ -91,6 +74,40 @@ class TileGrid(pg.ItemGroup):
         for tileItem in self.tileItems:
             tileItem.removeLayer(layer.name())
         self.layers.pop(layer.name())
+
+
+    def onTilesAppear(self, tiles):
+
+        #for ti in range(self.nTileItems):
+        #    print self.tileGridManager.tileInfo(ti).tileVisible()
+        for tileIndex in tiles:
+            tileItem = self.tileItems[tileIndex]
+            assert tileItem.tileInfo.tileVisible
+            #print  tileItem.tileInfo.roi2d.begin
+            tileItem.onTileAppear()
+
+
+    def updateTiles(self, layerName = None, roi2D = None, roi3D=None):
+
+        if roi2D is not None and roi3D is not None:
+            raise RuntimeError("roi2D and roi3D cannot are both not None")
+
+        elif roi2D is None and roi3D is None:
+            tilesToUpdate = self.tileGridManager.visibleTiles()
+        elif roi2D is not None:
+            tilesToUpdate = self.tileGridManager.visibleTilesInRoi2D(roi2D[0],roi2D[1])
+        elif roi3D is not None:
+            tilesToUpdate = self.tileGridManager.visibleTilesInRoi3D(roi3D[0],roi3D[1])
+
+        for tileIndex in tilesToUpdate:
+            tileItem = self.tileItems[tileIndex]
+            tileItem.onTileUpdate(layerName=layerName)
+
+    def onTilesDisappear(self, tiles):
+        for tileIndex in tiles:
+            tileItem = self.tileItems[tileIndex]
+            #assert tileItem.tileInfo.tileVisible == False
+            tileItem.onTileDisappear()
 
     def onScrollCoordinateChanged(self, coord):
         #print "coord set",coord
@@ -131,13 +148,13 @@ class TileItemGroup(pg.ItemGroup):
     """ A Container of all Graphics Items in a single(!) 2d-tile
     """
 
-    def __init__(self, tileShape,parent, tileInfo):
+    def __init__(self, viewBox, tileInfo):
+        self.viewBox = viewBox
         self.tileInfo = tileInfo
-        super(TileItemGroup,self).__init__()
-        self.tileShape = tileShape
         self.items = dict()
-        self.tileVisible_ = False
-        self.blockCoord2d_ = None
+        super(TileItemGroup,self).__init__()
+        
+
 
     def __getitem__(self, layerName):
         return self.items[layerName]
@@ -176,10 +193,15 @@ class TileItemGroup(pg.ItemGroup):
         self.items.pop(item)
 
     def onTileAppear(self):
-        #print "let all layers appear"
         for layerName in self.items:
-            #print "     layer ",layerName
             self.items[layerName].onTileAppear()
+
+    def onTileUpdate(self, layerName=None):
+        if layerName is None:
+            for layerName in self.items:
+                self.items[layerName].onTileUpdate()
+        else:
+            self.items[layerName].onTileUpdate()
 
     def onTileDisappear(self):
         for layerName in self.items:
