@@ -271,6 +271,7 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
                         print "first click"
                     print len(self.pathX)
 
+             
                     self.pathX.append(pos[0])
                     self.pathY.append(pos[1])
                     #self.image[pos[0],pos[1],0:4] = 255 
@@ -352,4 +353,28 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
             resultLabels *=255
         labelsBlock = resultLabels.reshape(shape3d)
         #print "LABELS MAX IN BLOCK",labelsBlock.max()
+        
+        
+        # "clip" the block into the spatial range 
+        #  ! TODO re-implement this shit
+        startInBlock = [0,0,0]
+        startInBlock[0] = max(0,0-start3d[0])
+        startInBlock[1] = max(0,0-start3d[1])
+        startInBlock[2] = max(0,0-start3d[2])
+
+        start3d[0] = max(0, start3d[0])
+        start3d[1] = max(0, start3d[1])
+        start3d[2] = max(0, start3d[2])
+        labelsBlock = labelsBlock[startInBlock[0]::,startInBlock[1]::,startInBlock[2]::]
+
+        shape3d = self.viewBox.navigator.spatialShape
+        labelsBlock = labelsBlock[
+            0 : min(labelsBlock.shape[0], shape3d[0]-start3d[0]),
+            0 : min(labelsBlock.shape[1], shape3d[1]-start3d[1]),
+            0 : min(labelsBlock.shape[2], shape3d[2]-start3d[2]),
+        ]
+
+
+    
         self.layer.writeLabelsToDataSource(labelsBlock, start3d)
+    
