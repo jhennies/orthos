@@ -67,7 +67,7 @@ class LayerBase(QtCore.QObject):
         self.pool = QtCore.QThreadPool.globalInstance()
         self.threadPool = ThreadPool(8)
 
-    def makeTileGraphicsItem(self):
+    def makeTileGraphicsItem(self,layer, tileItemGroup):
         raise RuntimeError("not implemented")
 
 
@@ -165,8 +165,8 @@ class GrayscaleLayer(PixelLayerBase):
         super(GrayscaleLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
 
     @abstractmethod
-    def makeTileGraphicsItem(self):
-        ti = TileImageItem()
+    def makeTileGraphicsItem(self,layer, tileItemGroup):
+        ti = TileImageItem(layer=layer, tileItemGroup=tileItemGroup)
         self.sigAlphaChanged.connect(ti.setOpacity)
         self.sigVisibilityChanged.connect(ti.onChangeLayerVisible)
         self.sigGradientEditorChanged.connect(ti.setLookupTable)
@@ -184,7 +184,8 @@ class GrayscaleLayer(PixelLayerBase):
         def fetchData(item, ts, tileInfo, dataSource):
             if tileInfo == item.tileInfo():
                 data = dataSource[tileInfo.slicing3d()].squeeze()
-                item.setImageToUpdateFrom(data,ts)
+                qimg = item.preRender(data)
+                item.setImageToUpdateFrom(data,ts, qimg=qimg)
                 d = UpdateData(tileInfo,ts)
                 item.updateQueue.sigUpdateFinished.emit(d)
 
@@ -227,10 +228,11 @@ class PaintLayer(PixelLayerBase):
         super(PaintLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
 
         self.paintRad = 0
+        self.levels=(0,255)
 
     @abstractmethod
-    def makeTileGraphicsItem(self):
-        ti = TilePaintImage(labelColors=self.labelColors)
+    def makeTileGraphicsItem(self,layer, tileItemGroup):
+        ti = TilePaintImage(layer=layer, tileItemGroup=tileItemGroup,labelColors=self.labelColors)
         self.sigAlphaChanged.connect(ti.setOpacity)
         self.sigVisibilityChanged.connect(ti.onChangeLayerVisible)
         self.sigLabelChanged.connect(ti.onLabelChanged)
@@ -259,7 +261,11 @@ class PaintLayer(PixelLayerBase):
                 dataRGBA[:,:,0:3] = numpy.take(lut, data, axis=0, mode='clip') 
                 dataA   = dataRGBA[:,:,3] 
                 dataA[numpy.where(data!=0)] = 255
-                item.setImageToUpdateFrom(dataRGBA,ts)
+
+                qimg = item.preRender(dataRGBA)
+                item.setImageToUpdateFrom(dataRGBA,ts,qimg=qimg)
+
+
                 d = UpdateData(tileInfo,ts)
                 item.updateQueue.sigUpdateFinished.emit(d)
     
@@ -309,6 +315,55 @@ class PaintLayer(PixelLayerBase):
 
 
 
+
+
+class SupervoxelLayer(PixelLayerBase):
+
+    sigGradientEditorChanged = QtCore.Signal(object)
+
+    def __init__(self,name,dataSource, lut):
+        self.lut = lut
+        self.dataSource = dataSource
+        self.shape = self.dataSource.shape
+        spatialBounds=((0,0,0), self.shape)
+        timeBounds=(0,1)
+        self.levels = (0,255)
+        super(SupervoxelLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
+
+    @abstractmethod
+    def makeTileGraphicsItem(self,layer, tileItemGroup):
+        ti = TileImageItem(layer=layer,tileItemGroup=tileItemGroup)
+        self.sigAlphaChanged.connect(ti.setOpacity)
+        self.sigVisibilityChanged.connect(ti.onChangeLayerVisible)
+        self.sigGradientEditorChanged.connect(ti.setLookupTable)
+        return ti
+
+    #ef makeCtrlWidget(self):
+    #   return GrayScaleLayerCtrl(layer=self)
+
+
+    def onTileUpdate(self, tileItem):
+
+        def fetchData(item, ts, tileInfo, dataSource):
+            if tileInfo == item.tileInfo():
+                data = dataSource[tileInfo.slicing3d()].squeeze()
+                data = numpy.take(self.lut,data,axis=0).astype('uint8')
+                qimg = item.preRender(data)
+                item.setImageToUpdateFrom(data,ts,qimg=qimg)
+                d = UpdateData(tileInfo,ts)
+                item.updateQueue.sigUpdateFinished.emit(d)
+
+
+        # add task to pool
+        tileInfo = tileItem.tileInfo().copy()
+        ts = time.clock()
+        task = Task(fetchData,tileItem, ts,tileInfo, self.dataSource)
+        future = self.threadPool.submit(task=task, onTaskFinished=noErrorIfTaskCanceled)
+        # add future to queue
+        tileItem.updateQueue.addFuture(future)
+
+    def mouseClickEvent(self, ev, pos2d, clickedViewBox):
+        print "layer",self.name(),"clicked at",pos2d
 
 
 

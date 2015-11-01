@@ -65,8 +65,7 @@ class TileGrid(pg.ItemGroup):
         #print "tile item group add layer",layer.name()
         self.layers[layer.name()] = layer
         for tileItem in self.tileItems:
-            tileGraphicItem = layer.makeTileGraphicsItem()
-            tileGraphicItem.initialize(layer=layer,tileItemGroup=tileItem)
+            tileGraphicItem = layer.makeTileGraphicsItem(layer=layer,tileItemGroup=tileItem)
             tileItem.addLayer(layer.name(),tileGraphicItem)
 
     def onRemoveLayer(self, layer):

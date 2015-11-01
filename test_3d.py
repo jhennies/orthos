@@ -22,8 +22,8 @@ mw.resize(800, 600)
 # raw layer
 
 
-#f = "/home/tbeier/Desktop/hhes/pmap_pipe/raw.h5"
-f = "/media/tbeier/data/datasets/hhess/2x2x2nm_chunked/data.h5"
+f = "/home/tbeier/Desktop/hhes/pmap_pipe/raw.h5"
+#f = "/media/tbeier/data/datasets/hhess/2x2x2nm_chunked/data.h5"
 rawSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
 rawLayer = GrayscaleLayer(name='raw',levels=[0,255],dataSource=rawSource)
 
@@ -31,6 +31,13 @@ rawLayer = GrayscaleLayer(name='raw',levels=[0,255],dataSource=rawSource)
 #f = "/home/tbeier/Desktop/hhes/pmap_pipe/pmap_c0.h5"
 #pmapSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
 #pmapLayer = GrayscaleLayer(name='pmap',levels=[0.0,1.0],dataSource=pmapSource,mult=255.0)
+
+
+# supervoxel layer
+f = "/home/tbeier/Desktop/hhes/init_underseg.h5"
+superVoxelSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
+lut = numpy.random.rand(1000000,3)*255.0
+superVoxelLayer = SupervoxelLayer(name='sv',dataSource=superVoxelSource,lut=lut)
 
 
 
@@ -53,6 +60,7 @@ viewerWidget = LayerViewerWidget(spatialShape=spatialShape, options=opt)
 mw.setCentralWidget(viewerWidget)
 viewerWidget.addLayer(rawLayer)
 #viewerWidget.addLayer(pmapLayer)
+viewerWidget.addLayer(superVoxelLayer)
 viewerWidget.addLayer(paintLayer)
 viewerWidget.rangeChanged()
 

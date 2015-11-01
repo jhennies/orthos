@@ -19,8 +19,160 @@ def make3dSlicing_(begin,end):
 
 
 
+
+
+
+class ImageItemBase(pg.ImageItem):
+    def __init__(self, *args, **kwargs):
+        super(ImageItemBase, self).__init__(*args, **kwargs)
+
+    def setImage(self, image=None, autoLevels=None,qimg=None, **kargs):
+        """
+        Update the image displayed by this item. For more information on how the image
+        is processed before displaying, see :func:`makeARGB <pyqtgraph.makeARGB>`
+        
+        =================  =========================================================================
+        **Arguments:**
+        image              (numpy array) Specifies the image data. May be 2D (width, height) or 
+                           3D (width, height, RGBa). The array dtype must be integer or floating
+                           point of any bit depth. For 3D arrays, the third dimension must
+                           be of length 3 (RGB) or 4 (RGBA).
+        autoLevels         (bool) If True, this forces the image to automatically select 
+                           levels based on the maximum and minimum values in the data.
+                           By default, this argument is true unless the levels argument is
+                           given.
+        lut                (numpy array) The color lookup table to use when displaying the image.
+                           See :func:`setLookupTable <pyqtgraph.ImageItem.setLookupTable>`.
+        levels             (min, max) The minimum and maximum values to use when rescaling the image
+                           data. By default, this will be set to the minimum and maximum values 
+                           in the image. If the image array has dtype uint8, no rescaling is necessary.
+        opacity            (float 0.0-1.0)
+        compositionMode    see :func:`setCompositionMode <pyqtgraph.ImageItem.setCompositionMode>`
+        border             Sets the pen used when drawing the image border. Default is None.
+        autoDownsample     (bool) If True, the image is automatically downsampled to match the
+                           screen resolution. This improves performance for large images and 
+                           reduces aliasing.
+        =================  =========================================================================
+        """
+        #profile = debug.#Profiler()
+
+        gotNewData = False
+        if image is None:
+            if self.image is None:
+                return
+        else:
+            gotNewData = True
+            shapeChanged = (self.image is None or image.shape != self.image.shape)
+            self.image = image.view(np.ndarray)
+            if self.image.shape[0] > 2**15-1 or self.image.shape[1] > 2**15-1:
+                if 'autoDownsample' not in kargs:
+                    kargs['autoDownsample'] = True
+            if shapeChanged:
+                self.prepareGeometryChange()
+                self.informViewBoundsChanged()
+
+        #profile()
+
+        if autoLevels is None:
+            if 'levels' in kargs:
+                autoLevels = False
+            else:
+                autoLevels = True
+        if autoLevels:
+            img = self.image
+            while img.size > 2**16:
+                img = img[::2, ::2]
+            mn, mx = img.min(), img.max()
+            if mn == mx:
+                mn = 0
+                mx = 255
+            kargs['levels'] = [mn,mx]
+
+        #profile()
+
+        self.setOpts(update=False, **kargs)
+
+        #profile()
+        if qimg is None:
+            self.qimage = None
+        else:
+            self.qimage = qimg
+        self.update()
+
+        #profile()
+
+        if gotNewData:
+            self.sigImageChanged.emit()
+
+
+    def updateImage(self, *args, **kargs):
+        ## used for re-rendering qimage from self.image.
+        
+        ## can we make any assumptions here that speed things up?
+        ## dtype, range, size are all the same?
+        defaults = {
+            'autoLevels': False,
+        }
+        defaults.update(kargs)
+        return self.setImage(*args, **defaults)
+
+    def render(self):
+        #Convert data to QImage for display.
+        
+        #profile = debug.Profiler()
+        if self.image is None or self.image.size == 0:
+            return
+        if isinstance(self.lut, collections.Callable):
+            lut = self.lut(self.image)
+        else:
+            lut = self.lut
+
+        if self.autoDownsample:
+            # reduce dimensions of image based on screen resolution
+            o = self.mapToDevice(QtCore.QPointF(0,0))
+            x = self.mapToDevice(QtCore.QPointF(1,0))
+            y = self.mapToDevice(QtCore.QPointF(0,1))
+            w = Point(x-o).length()
+            h = Point(y-o).length()
+            xds = int(1/max(1, w))
+            yds = int(1/max(1, h))
+            image = pg.downsample(self.image, xds, axis=0)
+            image = pg.downsample(image, yds, axis=1)
+        else:
+            image = self.image
+        
+        argb, alpha =  pg.makeARGB(image.transpose((1, 0, 2)[:image.ndim]), lut=lut, levels=self.levels)
+        self.qimage = pg.makeQImage(argb, alpha, transpose=False)
+
+
+    def preRender(self, image):
+        lut = self.lut
+        argb, alpha =  pg.makeARGB(image.transpose((1, 0, 2)[:image.ndim]), lut=lut, levels=self.levels)
+        self.qimage = pg.makeQImage(argb, alpha, transpose=False)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class UpdateQueue(QtCore.QObject):
+    
     sigUpdateFinished  = QtCore.Signal(object)
+
     def __init__(self,item):
         super(UpdateQueue,self).__init__()
 
@@ -50,18 +202,12 @@ class UpdateQueue(QtCore.QObject):
 
 
 class TileItemMixIn(object):
-    def __init__(self):
+    def __init__(self, layer, tileItemGroup):
         super(TileItemMixIn, self).__init__()
         self.updateQueue = UpdateQueue(self)
-        self.layer = None
         self.layerVisible_ = True
-        self.tileItemGroup = None
-
-    def initialize(self, layer, tileItemGroup):
-        self.isInit = True
         self.layer = layer
         self.tileItemGroup = tileItemGroup
-
 
 
     #@property
@@ -139,14 +285,15 @@ class TileItemMixIn(object):
 
 
 
-class TileImageItem(pg.ImageItem, TileItemMixIn):
+class TileImageItem(ImageItemBase, TileItemMixIn):
 
     def __init__(self, *args, **kwargs):
-
         self.setNewImageLock = threading.Lock()  
         BaseImageItem = pg.ImageItem
+        layer = kwargs.pop('layer')
+        tileItemGroup = kwargs.pop('tileItemGroup')
         BaseImageItem.__init__(self, *args, **kwargs)   
-        TileItemMixIn.__init__(self)
+        TileItemMixIn.__init__(self,layer=layer, tileItemGroup=tileItemGroup)
         self.lastStemp = time.clock()
         self.newImgDict = dict()
     def onUpdateFinished(self, updateData):
@@ -159,8 +306,8 @@ class TileImageItem(pg.ImageItem, TileItemMixIn):
             self.setNewImageLock.acquire()
             self.setPos(*updateData.tileInfo.roi2d.begin)
             self.lastStemp = ts
-            newImg = self.newImgDict.pop(ts)
-            self.setImage(newImg,levels=self.layer.levels)
+            newImg,qimg = self.newImgDict.pop(ts)
+            self.setImage(newImg,levels=self.layer.levels, qimg=qimg)
             #print self.levels
             self.setNewImageLock.release()
         else:
@@ -169,9 +316,9 @@ class TileImageItem(pg.ImageItem, TileItemMixIn):
             self.newImgDict.pop(ts)
             self.setNewImageLock.release()
 
-    def setImageToUpdateFrom(self, newImage, ts):
+    def setImageToUpdateFrom(self, newImage, ts, qimg=None):
         self.setNewImageLock.acquire()
-        self.newImgDict[ts] = newImage.copy()
+        self.newImgDict[ts] = ( newImage.copy(), qimg)
         self.setNewImageLock.release()
 
     def mouseClickEvent(self, ev, double=False):
@@ -179,7 +326,11 @@ class TileImageItem(pg.ImageItem, TileItemMixIn):
 
 
 
-class TilePaintImage(pg.ImageItem, TileItemMixIn):
+
+
+
+
+class TilePaintImage(ImageItemBase, TileItemMixIn):
 
     def __init__(self, *args, **kwargs):
 
@@ -187,8 +338,10 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
 
         self.setNewImageLock = threading.Lock()  
         BaseImageItem = pg.ImageItem
+        layer = kwargs.pop('layer')
+        tileItemGroup = kwargs.pop('tileItemGroup')
         BaseImageItem.__init__(self, *args, **kwargs)   
-        TileItemMixIn.__init__(self)
+        TileItemMixIn.__init__(self,layer=layer, tileItemGroup=tileItemGroup)
         self.lastStemp = time.clock()
         self.newImgDict = dict()
         self.label = 1 
@@ -197,11 +350,10 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
         self.pathY = []
         self.pathItem = pg.PlotCurveItem()
         
-
-    def initialize(self, layer, tileItemGroup):
-        TileItemMixIn.initialize(self, layer, tileItemGroup)
-        self.viewBox = tileItemGroup.viewBox
+        self.viewBox = self.tileItemGroup.viewBox
         self.viewBox.addItem(self.pathItem)
+
+
 
     def onLabelChanged(self, label):
         self.label = label
@@ -221,8 +373,8 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
             self.setNewImageLock.acquire()
             self.setPos(*updateData.tileInfo.roi2d.begin)
             self.lastStemp = ts
-            newImg = self.newImgDict.pop(ts)
-            self.setImage(newImg)#,levels=self.layer.levels)
+            newImg,qimg = self.newImgDict.pop(ts)
+            self.setImage(newImg,levels=self.layer.levels, qimg=qimg)
             self.setNewImageLock.release()
         else:
             self.setNewImageLock.acquire()
@@ -234,9 +386,9 @@ class TilePaintImage(pg.ImageItem, TileItemMixIn):
         self.newImgDict[ts] = newImage.copy()
         self.setNewImageLock.release()
 
-    def setImageToUpdateFrom(self, newImage, ts):
+    def setImageToUpdateFrom(self, newImage, ts, qimg=None):
         self.setNewImageLock.acquire()
-        self.newImgDict[ts] = newImage.copy()
+        self.newImgDict[ts] = ( newImage.copy(), qimg)
         self.setNewImageLock.release()
 
     #def mousePressEvent(self, ev):
