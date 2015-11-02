@@ -43,12 +43,12 @@
 /*orthos*/
 #include <orthos_cpp/orthos.hxx>
 #include <orthos_cpp/tilegrid_2d.hxx>
-
+#include <orthos_cpp/luts.hxx>
 /*vigra python */
 #include <vigra/numpy_array.hxx>
 #include <vigra/numpy_array_converters.hxx>
 
-
+#include <boost/python/suite/indexing/map_indexing_suite.hpp>
 
 namespace python = boost::python;
 
@@ -184,6 +184,31 @@ void exportTileGrid(){
     ;    
 }
 
+template<class K, class V>
+void exportMapT(const std::string & clsName){
+    typedef std::map<K,V> Map;
+    python::class_<Map>(clsName.c_str())
+        .def(python::map_indexing_suite<Map>() );
+}
+
+
+void exportMaps(){
+
+    typedef vigra::TinyVector<uint64_t, 2> V2UInt64;
+    
+    exportMapT<V2UInt64, uint8_t >("Map_From_V2UInt64_To_Uint8");
+    exportMapT<uint64_t, uint8_t >("Uint64_Uint8_Map");
+}
+
+
+
+
+
+
+
+void exportLutFunctions(){
+
+}
 
 
 BOOST_PYTHON_MODULE_INIT(_orthos_cpp)
@@ -195,6 +220,8 @@ BOOST_PYTHON_MODULE_INIT(_orthos_cpp)
 
     exportDrawing();
     exportTileGrid();
+    exportLutFunctions();
+    exportMaps();
 
 }
 

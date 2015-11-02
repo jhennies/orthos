@@ -155,8 +155,7 @@ class GrayscaleLayer(PixelLayerBase):
 
     sigGradientEditorChanged = QtCore.Signal(object)
 
-    def __init__(self,name, levels,dataSource, mult=None):
-        self.mult = mult
+    def __init__(self,name, levels,dataSource):
         self.dataSource = dataSource
         self.shape = self.dataSource.shape
         self.levels = levels
@@ -364,6 +363,17 @@ class SupervoxelLayer(PixelLayerBase):
 
     def mouseClickEvent(self, ev, pos2d, clickedViewBox):
         print "layer",self.name(),"clicked at",pos2d
+
+
+
+class SupervoxelObjectLayer(SupervoxelLayer):
+
+    sigGradientEditorChanged = QtCore.Signal(object)
+
+    def __init__(self,name,dataSource, lut):
+        super(SupervoxelObjectLayer,self).__init__(name=name,dataSource=dataSource,lut=lut)
+
+
 
 
 

@@ -24,8 +24,9 @@ def make3dSlicing_(begin,end):
 
 class ImageItemBase(pg.ImageItem):
     def __init__(self, *args, **kwargs):
+        self.brect__ = QtCore.QRectF(0., 0., 0., 0.,)
         super(ImageItemBase, self).__init__(*args, **kwargs)
-
+        
     def setImage(self, image=None, autoLevels=None,qimg=None, **kargs):
         """
         Update the image displayed by this item. For more information on how the image
@@ -68,6 +69,7 @@ class ImageItemBase(pg.ImageItem):
                 if 'autoDownsample' not in kargs:
                     kargs['autoDownsample'] = True
             if shapeChanged:
+                self.brect__ = QtCore.QRectF(0., 0., float(self.image.shape[0]), float(self.image.shape[1]))
                 self.prepareGeometryChange()
                 self.informViewBoundsChanged()
 
@@ -153,7 +155,8 @@ class ImageItemBase(pg.ImageItem):
 
 
 
-
+    def boundingRect(self):
+        return self.brect__
 
 
 
@@ -289,7 +292,7 @@ class TileImageItem(ImageItemBase, TileItemMixIn):
 
     def __init__(self, *args, **kwargs):
         self.setNewImageLock = threading.Lock()  
-        BaseImageItem = pg.ImageItem
+        BaseImageItem = ImageItemBase
         layer = kwargs.pop('layer')
         tileItemGroup = kwargs.pop('tileItemGroup')
         BaseImageItem.__init__(self, *args, **kwargs)   
@@ -337,7 +340,7 @@ class TilePaintImage(ImageItemBase, TileItemMixIn):
         self.labelColors = kwargs.pop('labelColors')
 
         self.setNewImageLock = threading.Lock()  
-        BaseImageItem = pg.ImageItem
+        BaseImageItem = ImageItemBase
         layer = kwargs.pop('layer')
         tileItemGroup = kwargs.pop('tileItemGroup')
         BaseImageItem.__init__(self, *args, **kwargs)   
