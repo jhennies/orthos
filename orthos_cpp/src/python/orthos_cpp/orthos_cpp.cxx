@@ -202,12 +202,49 @@ void exportMaps(){
 
 
 
+template<class T_IN, class LUT>
+vigra::NumpyAnyArray 
+pyApplyLut(
+    vigra::NumpyArray<1, T_IN> dataIn,
+    const LUT & lut,
+    vigra::NumpyArray<1, typename LUT::value_type> out
+){
+    out.reshapeIfEmpty(dataIn.shape());
+    applyLut(dataIn, lut, out);
+    return out;
+}
 
 
+
+
+template<class T_IN, class LUT>
+void exportApplyLut(){
+    python::def(
+        "applyLut", 
+        vigra::registerConverters(&pyApplyLut<T_IN, LUT>),
+        (
+            python::arg("data"),
+            python::arg("lut"),
+            python::arg("out") = python::object()
+        )
+    );
+}
+
+
+void exportLutClasses(){
+
+    {
+        typedef IntToRandRgbLut<3> Lut;
+        python::class_<Lut>("RandomLut3",python::init<>())
+        ;
+    }
+}
 
 
 void exportLutFunctions(){
 
+    // explicit lut
+    
 }
 
 
@@ -223,6 +260,7 @@ BOOST_PYTHON_MODULE_INIT(_orthos_cpp)
     exportLutFunctions();
     exportMaps();
 
+    exportLutClasses();
 }
 
 

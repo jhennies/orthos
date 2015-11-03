@@ -3,34 +3,38 @@
 typedef vigra::TinyVector<unsigned char, 3> UChar3;
 typedef vigra::TinyVector<unsigned char, 4> UChar4;
 
+struct RGBA_Tag{};
+struct ARGB_Tag{};
 
-template<class KEY, unsigned int CHANNELS>
+
+
+template<unsigned int CHANNELS>
 class IntToRandRgbLut{
 public:
-    typedef KEY Key;
-    typedef vigra::TinyVector<unsigned char, CHANNELS> ValueType;
+    typedef vigra::TinyVector<unsigned char, CHANNELS> value_type;
 
-    ValueType operator[](const Key & key)const{
-        ValueType res;
+    template<class UINT_KEY>
+    value_type operator[](const UINT_KEY  key)const{
+        value_type res;
         for(auto c=0; c<CHANNELS; ++c)
-            res[c] = hash_(offset_ + c+key*c)%256;
+            res[c] = hash_(offset_ + c+static_cast<uint64_t>(key)*c)%256;
         return key;
     }
 private:
-    std::hash<Key> hash_;
+    std::hash<uint64_t> hash_;
     size_t offset_;
 };
 
-template<class VALUE_TYPE, class INTEGRAL_KEY>
+template<class VALUE_TYPE>
 class MultiArrayViewLut{
 public:
-    typedef INTEGRAL_KEY Key;
-    typedef VALUE_TYPE ValueType;
+    typedef VALUE_TYPE value_type;
 private:
-    ValueType operator[](const Key & key)const{
+    template<class UINT_KEY>
+    value_type operator[](const UINT_KEY  key)const{
         return lut_[key];
     }
-    vigra::MultiArrayView<1, ValueType> lut_;
+    vigra::MultiArrayView<1, value_type> lut_;
 };
 
 
@@ -39,9 +43,9 @@ class SparseMapLut{
 public:
     typedef MAP Map;
     typedef LUT Lut;
-    typedef typename MAP::key_type Key;
+    typedef typename MAP::key_type MapKey;
     typedef typename MAP::mapped_type MapValueType;
-    typedef typename  LUT::ValueType ValueType;
+    typedef typename  LUT::value_type value_type;
 
     SparseMapLut(const Map & map, const Lut & lut,const MapValueType  defaultMapVal)
     :   map_(map),
@@ -49,8 +53,9 @@ public:
         defaultMapVal_(defaultMapVal){
     }
 
-    ValueType operator[](const Key & key)const{
-        auto iter = map_.find(key);
+    template<class KEY>
+    value_type operator[](const KEY key)const{
+        auto iter = map_.find(static_cast<MapKey>(key));
         if(iter == map_.end())
             return lut_[defaultMapVal_];
         else
@@ -70,7 +75,7 @@ template<class T_IN,  class LUT>
 void applyLut(
     vigra::MultiArrayView<1, T_IN> & imageIn,
     const LUT & lut,
-    vigra::MultiArrayView<1, typename LUT::ValueType> imageOut
+    vigra::MultiArrayView<1, typename LUT::value_type> imageOut
 ){
     auto inIter = imageIn.begin();
     auto outIter = imageOut.begin();

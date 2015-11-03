@@ -19,8 +19,13 @@ mw.resize(800, 600)
 
 
 
-
-
+if False:
+    print "read"
+    data = vigra.impex.readHDF5("/home/tbeier/Desktop/hhes/init_underseg.h5",'data')
+    f = h5py.File("/home/tbeier/Desktop/hhes/init_underseg_ch.h5")
+    print "write"
+    f.create_dataset('data',shape=data.shape,data=data,chunks=(64,64,64))
+    f.close()
 
 
 f = "/home/tbeier/Desktop/hhes/pmap_pipe/raw.h5"
@@ -35,7 +40,7 @@ pmapLayer = GrayscaleLayer(name='pmap',levels=[0.0,1.0],dataSource=pmapSource)
 
 
 # supervoxel layer
-f = "/home/tbeier/Desktop/hhes/init_underseg.h5"
+f = "/home/tbeier/Desktop/hhes/init_underseg_ch.h5"
 superVoxelSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
 lut = numpy.random.rand(1000000,3)*255.0
 superVoxelLayer = SupervoxelLayer(name='sv',dataSource=superVoxelSource,lut=lut)
@@ -61,7 +66,7 @@ viewerWidget = LayerViewerWidget(spatialShape=spatialShape, options=opt)
 mw.setCentralWidget(viewerWidget)
 viewerWidget.addLayer(rawLayer)
 viewerWidget.addLayer(pmapLayer)
-#viewerWidget.addLayer(superVoxelLayer)
+viewerWidget.addLayer(superVoxelLayer)
 viewerWidget.addLayer(paintLayer)
 viewerWidget.rangeChanged()
 

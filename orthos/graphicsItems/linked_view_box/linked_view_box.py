@@ -37,7 +37,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         for ps in self.pixelSizes:
             self.imageItemDict[ps] = dict()
 
-        super(InfiniteBlockedViewBox,self).__init__(invertY=True,lockAspect=True,enableMenu=True,
+        super(InfiniteBlockedViewBox,self).__init__(invertY=True,lockAspect=True,enableMenu=False,
                                                     name='fo')
         self.register("foo")
         self.navigator = navigator
@@ -202,7 +202,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
 
     
     def mouseClickEvent(self, ev, double=False):
-        self.raiseContextMenu(ev)
+        #self.raiseContextMenu(ev)
         pos = self.mapToView(ev.pos())
         pos = pos.x(),pos.y()
         s2d = self.viewSpatialShape
