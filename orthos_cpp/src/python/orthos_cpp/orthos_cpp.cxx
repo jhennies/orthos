@@ -230,21 +230,93 @@ void exportApplyLut(){
     );
 }
 
-
-void exportLutClasses(){
+template<class LUT>
+void exportRandomLutClass(const std::string & clsName){
 
     {
-        typedef IntToRandRgbLut<3> Lut;
-        python::class_<Lut>("RandomLut3",python::init<>())
+        typedef LUT Lut;
+        python::class_<Lut>(clsName.c_str(),python::init<>())
+        ;
+    }
+}
+
+template<class LUT>
+void exportFloatToUInt(const std::string & clsName){
+
+    {
+        typedef LUT Lut;
+        python::class_<Lut>(clsName.c_str(),python::init<const float,const float>())
+        ;
+    }
+}
+
+template<class LUT, class SUBLUT>
+void exportMapLut(const std::string & clsName){
+
+    {
+        typedef LUT Lut;
+        typedef typename Lut::Map Map;
+        typedef typename Lut::MapValueType MapValueType;
+        typedef typename Lut::Lut SubLut;
+
+        python::class_<Lut>(clsName.c_str(),
+            python::init<const Map &, const SUBLUT & ,const MapValueType>()
+        )
         ;
     }
 }
 
 
+
+
+
 void exportLutFunctions(){
 
-    // explicit lut
+
+    // float32 to uint8
+    {
+        typedef FloatToUInt<float,uint8_t> Lut;
+        exportFloatToUInt<Lut>("Float32ToUInt8Lut");
+        exportApplyLut<float, Lut>();
+    }
+    // float64 to uint8
+    {
+        typedef FloatToUInt<double,uint8_t> Lut;
+        exportFloatToUInt<Lut>("Float64ToUInt8Lut");
+        exportApplyLut<double, Lut>();
+    }
     
+    // random lut
+    {
+        typedef IntToRandRgbLut<3> Lut;
+        exportRandomLutClass<Lut>("RandomLut3");
+        //exportApplyLut<uint8_t, Lut>();
+        //exportApplyLut<uint16_t, Lut>();
+        exportApplyLut<uint32_t, Lut>();
+        //exportApplyLut<uint64_t, Lut>();
+    }
+    // explicit lut 3
+    {
+        typedef  vigra::NumpyArray<1, UChar3> ExplicitLut;
+        exportApplyLut<uint32_t, ExplicitLut>();
+    }
+    // explicit lut 4
+    {
+        typedef  vigra::NumpyArray<1, UChar4> ExplicitLut;
+        exportApplyLut<uint32_t, ExplicitLut>();
+    }
+
+    // export map luts
+    {
+        // map from uint64 to "object label" aka uint8
+        typedef std::map<uint64_t, uint8_t > Map;
+        typedef  vigra::NumpyArray<1, UChar3> ExplicitLut;
+        typedef  vigra::MultiArrayView<1, UChar3> ViewExplicitLut;
+
+        typedef SparseMapLut<Map, ViewExplicitLut> Lut;
+        exportMapLut<Lut,ExplicitLut>("SparseMapLut");
+        exportApplyLut<uint32_t, Lut>();
+    }
 }
 
 
@@ -259,8 +331,6 @@ BOOST_PYTHON_MODULE_INIT(_orthos_cpp)
     exportTileGrid();
     exportLutFunctions();
     exportMaps();
-
-    exportLutClasses();
 }
 
 
