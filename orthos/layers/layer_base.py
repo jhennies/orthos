@@ -154,15 +154,18 @@ class UpdateData(object):
 class GrayscaleLayer(PixelLayerBase):
 
     sigGradientEditorChanged = QtCore.Signal(object)
-
+    sigMinMaxChangedInternal = QtCore.Signal(object, object)
+    sigMinMaxChanged = QtCore.Signal(object, object)
     def __init__(self,name, levels,dataSource):
         self.dataSource = dataSource
         self.shape = self.dataSource.shape
         self.levels = levels
         spatialBounds=((0,0,0), self.shape)
         timeBounds=(0,1)
+        self.minMax = [None, None]
+        
         super(GrayscaleLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
-
+        self.sigMinMaxChangedInternal.connect(self._onMinMaxValChangedInternal)
     @abstractmethod
     def makeTileGraphicsItem(self,layer, tileItemGroup):
         ti = TileImageItem(layer=layer, tileItemGroup=tileItemGroup)
@@ -170,6 +173,18 @@ class GrayscaleLayer(PixelLayerBase):
         self.sigVisibilityChanged.connect(ti.onChangeLayerVisible)
         self.sigGradientEditorChanged.connect(ti.setLookupTable)
         return ti
+
+    def _onMinMaxValChangedInternal(self, minVal, maxVal):
+        changes = False
+        if  self.minMax[0] is None or minVal<self.minMax[0]:
+            self.minMax[0] = minVal 
+            changes = True
+        if self.minMax[1] is None or maxVal>self.minMax[1]:
+            self.minMax[1] = maxVal 
+            changes = True
+        if changes:
+            print "min max changed to ",minVal, maxVal
+            self.sigMinMaxChanged.emit(minVal, maxVal)
 
     def makeCtrlWidget(self):
         return GrayScaleLayerCtrl(layer=self)
@@ -180,9 +195,14 @@ class GrayscaleLayer(PixelLayerBase):
 
     def onTileUpdate(self, tileItem):
 
-        def fetchData(item, ts, tileInfo, dataSource):
+        def fetchData(item, ts, tileInfo, dataSource, oldMinMax):
             if tileInfo == item.tileInfo():
                 data = dataSource[tileInfo.slicing3d()].squeeze()
+                minVal = data.min()
+                maxVal = data.max()
+                if(oldMinMax[0] is None or minVal<oldMinMax[0] or maxVal>oldMinMax[1]):
+                    self.sigMinMaxChangedInternal.emit(minVal, maxVal)
+
                 qimg = item.preRender(data)
                 item.setImageToUpdateFrom(data,ts, qimg=qimg)
                 d = UpdateData(tileInfo,ts)
@@ -190,9 +210,10 @@ class GrayscaleLayer(PixelLayerBase):
 
 
         # add task to pool
+        oldMinMax = self.minMax[0], self.minMax[1]
         tileInfo = tileItem.tileInfo().copy()
         ts = time.clock()
-        task = Task(fetchData,tileItem, ts,tileInfo, self.dataSource)
+        task = Task(fetchData,tileItem, ts,tileInfo, self.dataSource, oldMinMax)
         future = self.threadPool.submit(task=task, onTaskFinished=noErrorIfTaskCanceled)
         # add future to queue
         tileItem.updateQueue.addFuture(future)

@@ -43,7 +43,7 @@
 /*orthos*/
 #include <orthos_cpp/orthos.hxx>
 #include <orthos_cpp/tilegrid_2d.hxx>
-#include <orthos_cpp/luts.hxx>
+#include <orthos_cpp/new_lut.hxx>
 /*vigra python */
 #include <vigra/numpy_array.hxx>
 #include <vigra/numpy_array_converters.hxx>
@@ -202,122 +202,62 @@ void exportMaps(){
 
 
 
-template<class T_IN, class LUT>
-vigra::NumpyAnyArray 
-pyApplyLut(
-    vigra::NumpyArray<1, T_IN> dataIn,
-    const LUT & lut,
-    vigra::NumpyArray<1, typename LUT::value_type> out
+template<class T>
+void exportNormalizedExplicitLut(
+    const std::string & clsName
 ){
-    out.reshapeIfEmpty(dataIn.shape());
-    applyLut(dataIn, lut, out);
-    return out;
+    typedef to_rgba::NormalizedExplicitLut<T> Lut;
+
+    python::class_<Lut>(clsName.c_str(), python::init<>())
+        .def("__call__",&Lut::operator[])
+        .def_readonly("minVal", &Lut::min_)
+        .def_readonly("maxVal", &Lut::max_)
+    ;
+}
+
+
+template<class T>
+void exportNormalizedGray(
+    const std::string & clsName
+){
+    typedef to_rgba::NormalizedGray<T> Lut;
+
+    python::class_<Lut>(clsName.c_str(), python::init<>())
+        .def("__call__",&Lut::operator[])
+        .def_readonly("minVal", &Lut::min_)
+        .def_readonly("maxVal", &Lut::max_)
+    ;
+}
+
+
+void exportLuts(){
+    exportNormalizedExplicitLut<float>("NormalizedExplicitLut_float32");
+    exportNormalizedExplicitLut<double>("NormalizedExplicitLut_float64");
+    exportNormalizedExplicitLut<uint8_t>("NormalizedExplicitLut_uint8");
+    exportNormalizedExplicitLut<uint16_t>("NormalizedExplicitLut_uint16");
+    exportNormalizedExplicitLut<uint32_t>("NormalizedExplicitLut_uint32");
+    exportNormalizedExplicitLut<uint64_t>("NormalizedExplicitLut_uint64");
+    exportNormalizedExplicitLut<int8_t>("NormalizedExplicitLut_int8");
+    exportNormalizedExplicitLut<int16_t>("NormalizedExplicitLut_int16");
+    exportNormalizedExplicitLut<int32_t>("NormalizedExplicitLut_int32");
+    exportNormalizedExplicitLut<int64_t>("NormalizedExplicitLut_int64");
+
+
+    exportNormalizedGray<float>("NormalizedGray_float32");
+    exportNormalizedGray<double>("NormalizedGray_float64");
+    exportNormalizedGray<uint8_t>("NormalizedGray_uint8");
+    exportNormalizedGray<uint16_t>("NormalizedGray_uint16");
+    exportNormalizedGray<uint32_t>("NormalizedGray_uint32");
+    exportNormalizedGray<uint64_t>("NormalizedGray_uint64");
+    exportNormalizedGray<int8_t>("NormalizedGray_int8");
+    exportNormalizedGray<int16_t>("NormalizedGray_int16");
+    exportNormalizedGray<int32_t>("NormalizedGray_int32");
+    exportNormalizedGray<int64_t>("NormalizedGray_int64");
 }
 
 
 
 
-template<class T_IN, class LUT>
-void exportApplyLut(){
-    python::def(
-        "applyLut", 
-        vigra::registerConverters(&pyApplyLut<T_IN, LUT>),
-        (
-            python::arg("data"),
-            python::arg("lut"),
-            python::arg("out") = python::object()
-        )
-    );
-}
-
-template<class LUT>
-void exportRandomLutClass(const std::string & clsName){
-
-    {
-        typedef LUT Lut;
-        python::class_<Lut>(clsName.c_str(),python::init<>())
-        ;
-    }
-}
-
-template<class LUT>
-void exportFloatToUInt(const std::string & clsName){
-
-    {
-        typedef LUT Lut;
-        python::class_<Lut>(clsName.c_str(),python::init<const float,const float>())
-        ;
-    }
-}
-
-template<class LUT, class SUBLUT>
-void exportMapLut(const std::string & clsName){
-
-    {
-        typedef LUT Lut;
-        typedef typename Lut::Map Map;
-        typedef typename Lut::MapValueType MapValueType;
-        typedef typename Lut::Lut SubLut;
-
-        python::class_<Lut>(clsName.c_str(),
-            python::init<const Map &, const SUBLUT & ,const MapValueType>()
-        )
-        ;
-    }
-}
-
-
-
-
-
-void exportLutFunctions(){
-
-
-    // float32 to uint8
-    {
-        typedef FloatToUInt<float,uint8_t> Lut;
-        exportFloatToUInt<Lut>("Float32ToUInt8Lut");
-        exportApplyLut<float, Lut>();
-    }
-    // float64 to uint8
-    {
-        typedef FloatToUInt<double,uint8_t> Lut;
-        exportFloatToUInt<Lut>("Float64ToUInt8Lut");
-        exportApplyLut<double, Lut>();
-    }
-    
-    // random lut
-    {
-        typedef IntToRandRgbLut<3> Lut;
-        exportRandomLutClass<Lut>("RandomLut3");
-        //exportApplyLut<uint8_t, Lut>();
-        //exportApplyLut<uint16_t, Lut>();
-        exportApplyLut<uint32_t, Lut>();
-        //exportApplyLut<uint64_t, Lut>();
-    }
-    // explicit lut 3
-    {
-        typedef  vigra::NumpyArray<1, UChar3> ExplicitLut;
-        exportApplyLut<uint32_t, ExplicitLut>();
-    }
-    // explicit lut 4
-    {
-        typedef  vigra::NumpyArray<1, UChar4> ExplicitLut;
-        exportApplyLut<uint32_t, ExplicitLut>();
-    }
-
-    // export map luts
-    {
-        // map from uint64 to "object label" aka uint8
-        typedef std::map<uint64_t, uint8_t > Map;
-        typedef  vigra::NumpyArray<1, UChar3> ExplicitLut;
-        typedef  vigra::MultiArrayView<1, UChar3> ViewExplicitLut;
-
-        typedef SparseMapLut<Map, ViewExplicitLut> Lut;
-        exportMapLut<Lut,ExplicitLut>("SparseMapLut");
-        exportApplyLut<uint32_t, Lut>();
-    }
-}
 
 
 BOOST_PYTHON_MODULE_INIT(_orthos_cpp)
@@ -329,8 +269,8 @@ BOOST_PYTHON_MODULE_INIT(_orthos_cpp)
 
     exportDrawing();
     exportTileGrid();
-    exportLutFunctions();
     exportMaps();
+    exportLuts();
 }
 
 

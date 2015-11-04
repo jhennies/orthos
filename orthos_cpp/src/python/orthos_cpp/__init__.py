@@ -36,4 +36,41 @@ class MoreTileInfo(injector, TileInfo):
 
 
 
+class ValToRgba(object):
+
+
+    def normalizeAndColormap(dtype):
+        dtypeStr = dtype
+        cls = _orthos_cpp.__dict__['NormalizedExplicitLut_%s'%dtypeStr]
+        return cls
+
+
+    def normalize(dtype, channels=None):
+        dtypeStr = dtype
+        cls = _orthos_cpp.__dict__['NormalizedGray_%s'%dtypeStr]
+        return cls
+
+    def unmodified(dtype, channels=None):
+        """
+            only for values which naturally
+            fall into the uint8 range.
+
+            No normalization what so ever is applied,
+            values are just casted to a tiny vector
+            of uint8 of length 4.
+        """
+        pass
+
+    def labelToImplicitRandom(dtype):
+        pass
+
+    def sparseMappedExplicit(dtype):
+        pass
+
+
+
+
+
+
+
 

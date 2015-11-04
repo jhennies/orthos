@@ -122,21 +122,15 @@ class LayerItemWidget( QtGui.QWidget ):
     @property
     def layer(self):
         return self._layer
-    @layer.setter
-    def layer(self, layer):
-        if self._layer:
-            self._layer.changed.disconnect(self._updateState)
-        self._layer = layer
-        self._updateState()
-        self._layer.changed.connect(self._updateState)
 
-    def __init__( self, parent=None ):
+
+    def __init__( self,layer, parent=None ):
         super(LayerItemWidget, self).__init__( parent=parent )
-        self._layer = None
+        self._layer = layer
 
         self._font = QtGui.QFont(QtGui.QFont().defaultFamily(), 9)
         self._fm = QtGui.QFontMetrics( self._font )
-        self.bar = FractionSelectionBar( initial_fraction = 0. )
+        self.bar = FractionSelectionBar( initial_fraction = layer.alpha() )
         self.bar.setFixedHeight(10)
         self.nameLabel = QtGui.QLabel( parent=self )
         self.nameLabel.setFont( self._font )
@@ -146,7 +140,7 @@ class LayerItemWidget( QtGui.QWidget ):
         self.opacityLabel.setFont( self._font )
         self.opacityLabel.setText( u"\u03B1=%0.1f%%" % (100.0*(self.bar.fraction())))
         self.toggleEye = ToggleEye( parent=self )
-        self.toggleEye.setActive(False)
+        self.toggleEye.setActive(layer.visible())
         self.toggleEye.setFixedWidth(35)
         self.toggleEye.setToolTip("Visibility")
         self.channelSelector = QtGui.QSpinBox( parent=self )
@@ -170,24 +164,24 @@ class LayerItemWidget( QtGui.QWidget ):
 
         self.setLayout( self._layout )
 
-        self.bar.fractionChanged.connect( self._onFractionChanged )
-        self.toggleEye.activeChanged.connect( self._onEyeToggle )
+        #self.bar.fractionChanged.connect( self._onFractionChanged )
+        #self.toggleEye.activeChanged.connect( self._onEyeToggle )
         self.channelSelector.valueChanged.connect( self._onChannelChanged )
 
     def mousePressEvent( self, ev ):
         super(LayerItemWidget, self).mousePressEvent( ev )
 
-    def _onFractionChanged( self, fraction ):
-        if self._layer and (fraction != self._layer.opacity):
-            self._layer.opacity = fraction
+    #def _onFractionChanged( self, fraction ):
+    #    if self._layer and (fraction != self._layer.opacity):
+    #        self._layer.opacity = fraction
 
-    def _onEyeToggle( self, active ):
-        if self._layer and (active != self._layer.visible):
-            
-            if self._layer._allowToggleVisible:
-                self._layer.visible = active
-            else:
-                self.toggleEye.setActive(True)
+    #def _onEyeToggle( self, active ):
+    #    if self._layer and (active != self._layer.visible):
+    #        
+    #        if self._layer._allowToggleVisible:
+    #            self._layer.visible = active
+    #        else:
+    #            self.toggleEye.setActive(True)
 
     def _onChannelChanged( self, channel ):
         if self._layer and (channel != self._layer.channel):
@@ -219,7 +213,7 @@ class LayerBaseCtrlWidget(QtGui.QWidget):
         super(LayerBaseCtrlWidget,self).__init__()
         self.layer = layer
 
-        self.basicCtrl = LayerItemWidget()
+        self.basicCtrl = LayerItemWidget(layer=layer)
         self.basicCtrl.nameLabel.setText(self.layer.name())
 
 
@@ -292,7 +286,7 @@ class PaintLayerCtrl(LayerBaseCtrlWidget):
         self.brushSizeSlider.setGeometry(30, 40, 100, 30)
 
 
-        self.layerItemWidget = LayerItemWidget()
+        self.layerItemWidget = LayerItemWidget(layer)
         self.layerItemWidget.nameLabel.setText(self.layer.name())
 
         self.setupUI()

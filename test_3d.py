@@ -66,8 +66,8 @@ viewerWidget = LayerViewerWidget(spatialShape=spatialShape, options=opt)
 mw.setCentralWidget(viewerWidget)
 viewerWidget.addLayer(rawLayer)
 viewerWidget.addLayer(pmapLayer)
-viewerWidget.addLayer(superVoxelLayer)
-viewerWidget.addLayer(paintLayer)
+#viewerWidget.addLayer(superVoxelLayer)
+#viewerWidget.addLayer(paintLayer)
 viewerWidget.rangeChanged()
 
 def closeCallback():

@@ -1,6 +1,16 @@
 #include <vigra/multi_array.hxx>
 #include <cmath>
 
+
+
+
+
+
+
+
+
+
+
 typedef vigra::TinyVector<unsigned char, 3> UChar3;
 typedef vigra::TinyVector<unsigned char, 4> UChar4;
 
