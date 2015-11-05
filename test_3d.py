@@ -31,7 +31,7 @@ if False:
 f = "/home/tbeier/Desktop/hhes/pmap_pipe/raw.h5"
 #f = "/media/tbeier/data/datasets/hhess/2x2x2nm_chunked/data.h5"
 rawSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
-rawLayer = GrayscaleLayer(name='raw',levels=[0,255],dataSource=rawSource)
+rawLayer = GrayscaleLayer(name='raw',dataSource=rawSource)
 
 
 # pmap layer

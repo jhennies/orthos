@@ -233,8 +233,8 @@ void setLutArray(
     LUT & lut,
     const vigra::NumpyArray<1, UChar4> & elut
 ){
-    std::cout<<"SET LUT ARRAY \n";
-    std::cout<<"input shape "<<elut.shape()<<"\n";
+    //std::cout<<"SET LUT ARRAY \n";
+    //std::cout<<"input shape "<<elut.shape()<<"\n";
     lut.elut_ = elut;
 }
 

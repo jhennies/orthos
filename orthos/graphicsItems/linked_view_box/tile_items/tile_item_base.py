@@ -346,7 +346,7 @@ class TileImageItem(ImageItemBase, TileItemMixIn):
             self.setPos(*updateData.tileInfo.roi2d.begin)
             self.lastStemp = ts
             newImg,qimg = self.newImgDict.pop(ts)
-            self.setImage(newImg,levels=self.layer.levels, qimg=qimg)
+            self.setImage(newImg, qimg=qimg)
             #print self.levels
             self.setNewImageLock.release()
         else:

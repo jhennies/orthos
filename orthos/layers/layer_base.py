@@ -158,7 +158,7 @@ class GrayscaleLayer(PixelLayerBase):
     sigMinMaxChangedInternal = QtCore.Signal(object, object)
     sigMinMaxChanged = QtCore.Signal(object, object)
     sigCppLutChanged = QtCore.Signal()
-    def __init__(self,name, levels, dataSource):
+    def __init__(self,name, dataSource, levels='auto'):
 
 
 
@@ -184,8 +184,8 @@ class GrayscaleLayer(PixelLayerBase):
         self.cppLut = ValToRgba.normalizeAndColormap(dtype=self.inputDtype)()
         elut = self._ctrlWidget.makeLut()
         self.cppLut.setLutArray(elut)
-        #self.cppLut.minVal = 0
-        #self.cppLut.maxVal = 255
+        if levels is not 'auto':
+            self.cppLut.setMinMax(levels[0],levels[1])
 
     @abstractmethod
     def makeTileGraphicsItem(self,layer, tileItemGroup):
@@ -232,8 +232,9 @@ class GrayscaleLayer(PixelLayerBase):
                 data = dataSource[tileInfo.slicing3d()].squeeze()
                 minVal = data.min()
                 maxVal = data.max()
-                if(oldMinMax[0] is None or minVal<oldMinMax[0] or maxVal>oldMinMax[1]):
-                    self.sigMinMaxChangedInternal.emit(minVal, maxVal)
+                if self.levels == 'auto':
+                    if(oldMinMax[0] is None or minVal<oldMinMax[0] or maxVal>oldMinMax[1]):
+                        self.sigMinMaxChangedInternal.emit(minVal, maxVal)
 
                 qimg = item.preRender(data)
                 item.setImageToUpdateFrom(data,ts, qimg=qimg)
