@@ -260,6 +260,8 @@ class GrayScaleLayerCtrl(LayerBaseCtrlWidget):
             self.layer.onGradientEditorChanged(editor)
         self.gradientWidget.sigGradientChanged.connect(gradientEditorChanged)
 
+    def makeLut(self):
+        return self.gradientWidget.item.getLookupTable(255,True)
 
 
 

@@ -2,6 +2,7 @@
 # But for some reason that doesn't seem to work on all systems.
 # The quick workaround is to just import it here.
 import vigra
+import numpy
 from _orthos_cpp import *
 
 
@@ -36,11 +37,22 @@ class MoreTileInfo(injector, TileInfo):
 
 
 
+
+
+
+
 class ValToRgba(object):
 
 
-    def normalizeAndColormap(dtype):
-        dtypeStr = dtype
+    dtypeDict = {
+        numpy.uint8   : 'uint8',
+        numpy.uint16  : 'uint16',
+        numpy.uint32  : 'uint32',
+    }
+
+    @classmethod
+    def normalizeAndColormap(cls, dtype):
+        dtypeStr = ValToRgba.dtypeDict[dtype]
         cls = _orthos_cpp.__dict__['NormalizedExplicitLut_%s'%dtypeStr]
         return cls
 
@@ -71,6 +83,12 @@ class ValToRgba(object):
 
 
 
-
-
-
+def makeRGBAImage(image, cppLut):
+    return applyLut2D(image, cppLut)
+    #sshape = image.shape[0:2]
+    #imageFlat = image.reshape([sshape[0]*sshape[1],-1])
+    #imageFlat = imageFlat.squeeze()
+    ##print "FLAT",imageFlat.shape, imageFlat.dtype
+    #imageFlatRGBA = applyLut(imageFlat, cppLut)
+    #imageRGBA = imageFlatRGBA.reshape([sshape[0],sshape[1],-1])
+    #return imageRGBA.squeeze()

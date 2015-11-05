@@ -6,6 +6,7 @@ from  ..graphicsItems.linked_view_box.tile_items import *
 from  ..parallel import *
 import datetime
 import time
+from orthos_cpp import *
 # request which can be send to a layer
 
 class LayerRequestBase(object):
@@ -156,22 +157,43 @@ class GrayscaleLayer(PixelLayerBase):
     sigGradientEditorChanged = QtCore.Signal(object)
     sigMinMaxChangedInternal = QtCore.Signal(object, object)
     sigMinMaxChanged = QtCore.Signal(object, object)
-    def __init__(self,name, levels,dataSource):
+    sigCppLutChanged = QtCore.Signal()
+    def __init__(self,name, levels, dataSource):
+
+
+
         self.dataSource = dataSource
         self.shape = self.dataSource.shape
         self.levels = levels
         spatialBounds=((0,0,0), self.shape)
         timeBounds=(0,1)
         self.minMax = [None, None]
+
+        self._ctrlWidget = None
+            
         
         super(GrayscaleLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
         self.sigMinMaxChangedInternal.connect(self._onMinMaxValChangedInternal)
+
+        self._ctrlWidget = GrayScaleLayerCtrl(layer=self)
+
+
+       
+
+        self.inputDtype = dataSource.dtype
+        self.cppLut = ValToRgba.normalizeAndColormap(dtype=self.inputDtype)()
+        elut = self._ctrlWidget.makeLut()
+        self.cppLut.setLutArray(elut)
+        self.cppLut.minVal = 0
+        self.cppLut.maxVal = 255
+
     @abstractmethod
     def makeTileGraphicsItem(self,layer, tileItemGroup):
-        ti = TileImageItem(layer=layer, tileItemGroup=tileItemGroup)
+        ti = TileImageItem(layer=layer, tileItemGroup=tileItemGroup, cppLut = self.cppLut)
         self.sigAlphaChanged.connect(ti.setOpacity)
         self.sigVisibilityChanged.connect(ti.onChangeLayerVisible)
-        self.sigGradientEditorChanged.connect(ti.setLookupTable)
+        self.sigCppLutChanged.connect(ti.cppLutChanged)
+        #self.sigGradientEditorChanged.connect(ti.setLookupTable)
         return ti
 
     def _onMinMaxValChangedInternal(self, minVal, maxVal):
@@ -187,12 +209,17 @@ class GrayscaleLayer(PixelLayerBase):
             self.sigMinMaxChanged.emit(minVal, maxVal)
 
     def makeCtrlWidget(self):
-        return GrayScaleLayerCtrl(layer=self)
+        if self._ctrlWidget is None:
+            self._ctrlWidget = GrayScaleLayerCtrl(layer=self)
+        return self._ctrlWidget
 
     def onGradientEditorChanged(self, gi):
-        lut = gi.getLookupTable(256)
-        self.sigGradientEditorChanged.emit(lut)
-
+        elut = gi.getLookupTable(256,True)
+        print "SET ELUT"
+        self.cppLut.setLutArray(elut)
+        print "DONE"
+        self.sigGradientEditorChanged.emit(elut)
+        self.sigCppLutChanged.emit()
     def onTileUpdate(self, tileItem):
 
         def fetchData(item, ts, tileInfo, dataSource, oldMinMax):

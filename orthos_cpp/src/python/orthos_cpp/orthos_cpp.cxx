@@ -47,7 +47,7 @@
 /*vigra python */
 #include <vigra/numpy_array.hxx>
 #include <vigra/numpy_array_converters.hxx>
-
+#include <vigra/python_utility.hxx>
 #include <boost/python/suite/indexing/map_indexing_suite.hpp>
 
 namespace python = boost::python;
@@ -201,6 +201,63 @@ void exportMaps(){
 }
 
 
+template<class T_IN, class LUT>
+vigra::NumpyAnyArray pyApplyLut(
+    const vigra::NumpyArray<1, T_IN> & data,
+    const LUT & lut,
+    vigra::NumpyArray<1, typename LUT::value_type>  out
+){
+    out.reshapeIfEmpty(data.shape());
+    {
+        vigra::PyAllowThreads _pythread;
+        to_rgba::applyLut(data, lut, out);
+    }
+    return out;
+}
+
+template<class T_IN, class LUT>
+vigra::NumpyAnyArray pyApplyLut2D(
+    const vigra::NumpyArray<2, T_IN> & data,
+    const LUT & lut,
+    vigra::NumpyArray<2, typename LUT::value_type>  out
+){
+    out.reshapeIfEmpty(data.shape());
+    {
+        vigra::PyAllowThreads _pythread;
+        to_rgba::applyLut2D(data, lut, out);
+    }
+    return out;
+}
+
+template<class T_IN, class LUT>
+void exportApplyLut(){
+    python::def("applyLut",vigra::registerConverters(&pyApplyLut<T_IN, LUT>),
+        (
+            python::arg("data"),
+            python::arg("lut"),
+            python::arg("out") = python::object()
+        )
+    );
+
+    python::def("applyLut2D",vigra::registerConverters(&pyApplyLut2D<T_IN, LUT>),
+        (
+            python::arg("data"),
+            python::arg("lut"),
+            python::arg("out") = python::object()
+        )
+    );
+}
+
+template<class LUT>
+void setLutArray(
+    LUT & lut,
+    const vigra::NumpyArray<1, UChar4> & elut
+){
+    std::cout<<"SET LUT ARRAY \n";
+    std::cout<<"input shape "<<elut.shape()<<"\n";
+    lut.elut_ = elut;
+}
+
 
 template<class T>
 void exportNormalizedExplicitLut(
@@ -210,9 +267,12 @@ void exportNormalizedExplicitLut(
 
     python::class_<Lut>(clsName.c_str(), python::init<>())
         .def("__call__",&Lut::operator[])
-        .def_readonly("minVal", &Lut::min_)
-        .def_readonly("maxVal", &Lut::max_)
+        .def_readwrite("minVal", &Lut::min_)
+        .def_readwrite("maxVal", &Lut::max_)
+        .def("setLutArray",vigra::registerConverters(&setLutArray<Lut>))
     ;
+
+    exportApplyLut<T, Lut>();
 }
 
 
@@ -227,10 +287,21 @@ void exportNormalizedGray(
         .def_readonly("minVal", &Lut::min_)
         .def_readonly("maxVal", &Lut::max_)
     ;
+    exportApplyLut<T, Lut>();
 }
 
 
+
+
+
+
+
+
+
+
+
 void exportLuts(){
+
     exportNormalizedExplicitLut<float>("NormalizedExplicitLut_float32");
     exportNormalizedExplicitLut<double>("NormalizedExplicitLut_float64");
     exportNormalizedExplicitLut<uint8_t>("NormalizedExplicitLut_uint8");

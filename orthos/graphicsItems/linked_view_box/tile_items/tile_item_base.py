@@ -8,6 +8,8 @@ import time
 import collections
 import vigra
 from ....core import *
+from orthos_cpp import *
+
 def make3dSlicing_(begin,end):
     slicing = []
     for b,e in zip(begin, end):
@@ -23,10 +25,10 @@ def make3dSlicing_(begin,end):
 
 
 class ImageItemBase(pg.ImageItem):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, cppLut):
         self.brect__ = QtCore.QRectF(0., 0., 0., 0.,)
-        super(ImageItemBase, self).__init__(*args, **kwargs)
-        
+        super(ImageItemBase, self).__init__()
+        self.cppLut = cppLut
     def setImage(self, image=None, autoLevels=None,qimg=None, **kargs):
         """
         Update the image displayed by this item. For more information on how the image
@@ -107,6 +109,7 @@ class ImageItemBase(pg.ImageItem):
             self.sigImageChanged.emit()
 
 
+
     def updateImage(self, *args, **kargs):
         ## used for re-rendering qimage from self.image.
         
@@ -117,8 +120,7 @@ class ImageItemBase(pg.ImageItem):
         }
         defaults.update(kargs)
         return self.setImage(*args, **defaults)
-
-    def render(self):
+    def render2(self):
         #Convert data to QImage for display.
         
         #profile = debug.Profiler()
@@ -129,7 +131,7 @@ class ImageItemBase(pg.ImageItem):
         else:
             lut = self.lut
 
-        if self.autoDownsample:
+        if False:#self.autoDownsample:
             # reduce dimensions of image based on screen resolution
             o = self.mapToDevice(QtCore.QPointF(0,0))
             x = self.mapToDevice(QtCore.QPointF(1,0))
@@ -146,12 +148,48 @@ class ImageItemBase(pg.ImageItem):
         argb, alpha =  pg.makeARGB(image.transpose((1, 0, 2)[:image.ndim]), lut=lut, levels=self.levels)
         self.qimage = pg.makeQImage(argb, alpha, transpose=False)
 
+    def render(self):
+        #Convert data to QImage for display.
+        
+        #profile = debug.Profiler()
+        if self.image is None or self.image.size == 0:
+            return
+        if isinstance(self.lut, collections.Callable):
+            lut = self.lut(self.image)
+        else:
+            lut = self.lut
 
-    def preRender(self, image):
-        lut = self.lut
-        argb, alpha =  pg.makeARGB(image.transpose((1, 0, 2)[:image.ndim]), lut=lut, levels=self.levels)
+        if False:#self.autoDownsample:
+            # reduce dimensions of image based on screen resolution
+            o = self.mapToDevice(QtCore.QPointF(0,0))
+            x = self.mapToDevice(QtCore.QPointF(1,0))
+            y = self.mapToDevice(QtCore.QPointF(0,1))
+            w = Point(x-o).length()
+            h = Point(y-o).length()
+            xds = int(1/max(1, w))
+            yds = int(1/max(1, h))
+            image = pg.downsample(self.image, xds, axis=0)
+            image = pg.downsample(image, yds, axis=1)
+        else:
+            image = self.image
+
+
+        
+        imageRGBA = makeRGBAImage(image,self.cppLut)
+        imageNew = imageRGBA
+        argb, alpha =  pg.makeARGB(imageNew.transpose((1, 0, 2)[:imageNew.ndim]), lut=None, levels=None)
         self.qimage = pg.makeQImage(argb, alpha, transpose=False)
 
+
+    def preRender(self, image):
+        imageRGBA = makeRGBAImage(image,self.cppLut)
+        imageNew = imageRGBA
+        argb, alpha =  pg.makeARGB(imageNew.transpose((1, 0, 2)[:imageNew.ndim]), lut=None, levels=None)
+        self.qimage = pg.makeQImage(argb, alpha, transpose=False)
+
+    def cppLutChanged(self):
+        self.qimage = None
+        self.update()
 
 
 
@@ -290,12 +328,10 @@ class TileItemMixIn(object):
 
 class TileImageItem(ImageItemBase, TileItemMixIn):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, layer, tileItemGroup, cppLut):
         self.setNewImageLock = threading.Lock()  
         BaseImageItem = ImageItemBase
-        layer = kwargs.pop('layer')
-        tileItemGroup = kwargs.pop('tileItemGroup')
-        BaseImageItem.__init__(self, *args, **kwargs)   
+        BaseImageItem.__init__(self, cppLut=cppLut)   
         TileItemMixIn.__init__(self,layer=layer, tileItemGroup=tileItemGroup)
         self.lastStemp = time.clock()
         self.newImgDict = dict()

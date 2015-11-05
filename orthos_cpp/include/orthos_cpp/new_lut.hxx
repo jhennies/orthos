@@ -29,21 +29,24 @@ namespace to_rgba{
     struct NormalizedExplicitLut{
     public:
         typedef UChar4 value_type;
-        UChar4 operator[](const F  val){
-            return lut_[normalizeToIndex(val, min_, max_, lut_.size())];
+        UChar4 operator[](const F  val)const{
+            //std::cout<<"elut "<<elut_.size()<<" min "<<int(min_)<<" max "<<int(max_)<<"\n";
+            const auto index = normalizeToIndex(val, min_, max_, elut_.size());
+            //std::cout<<"index "<<index<<"\n";
+            return elut_[index];
         }
 
         F min_;
         F max_;
 
-        vigra::MultiArrayView<1, UChar4> lut_;
+        vigra::MultiArray<1, UChar4> elut_;
     };
 
     template<class F>
     struct NormalizedGray{
 
         typedef UChar4 value_type;
-        UChar4 operator[](const F  val){
+        UChar4 operator[](const F  val)const{
             return UChar4(normalizeToIndex(val, min_, max_, 256));
         }
         F min_;
@@ -56,5 +59,38 @@ namespace to_rgba{
             return UChar4(val);
         }
     };
+
+
+
+
+    template<class T_IN,  class LUT>
+    void applyLut(
+        const vigra::MultiArrayView<1, T_IN> & imageIn,
+        const LUT & lut,
+        vigra::MultiArrayView<1, typename LUT::value_type> & imageOut
+    ){
+        //std::cout<<"apply lut\n";
+        auto inIter = imageIn.begin();
+        auto outIter = imageOut.begin();
+        for(size_t i=0; i<imageIn.size();++i,++inIter,++outIter){
+            *outIter = lut[*inIter];
+        }
+        //std::cout<<"apply lut done\n";
+    }
+
+    template<class T_IN,  class LUT>
+    void applyLut2D(
+        const vigra::MultiArrayView<2, T_IN> & imageIn,
+        const LUT & lut,
+        vigra::MultiArrayView<2, typename LUT::value_type> & imageOut
+    ){
+        //std::cout<<"apply lut\n";
+        auto inIter = imageIn.begin();
+        auto outIter = imageOut.begin();
+        for(size_t i=0; i<imageIn.size();++i,++inIter,++outIter){
+            *outIter = lut[*inIter];
+        }
+        //std::cout<<"apply lut done\n";
+    }
 
 }

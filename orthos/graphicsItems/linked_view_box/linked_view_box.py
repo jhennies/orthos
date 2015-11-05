@@ -37,9 +37,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         for ps in self.pixelSizes:
             self.imageItemDict[ps] = dict()
 
-        super(InfiniteBlockedViewBox,self).__init__(invertY=True,lockAspect=True,enableMenu=False,
-                                                    name='fo')
-        self.register("foo")
+        super(InfiniteBlockedViewBox,self).__init__(invertY=True,lockAspect=True)
         self.navigator = navigator
         self.pixelLayers = pixelLayers
         self.scrollAxis = scrollAxis
@@ -202,7 +200,6 @@ class InfiniteBlockedViewBox(pg.ViewBox):
 
     
     def mouseClickEvent(self, ev, double=False):
-        #self.raiseContextMenu(ev)
         pos = self.mapToView(ev.pos())
         pos = pos.x(),pos.y()
         s2d = self.viewSpatialShape
@@ -211,7 +208,6 @@ class InfiniteBlockedViewBox(pg.ViewBox):
                 ev.accept()
                 self.navigator.change2PlanesByDoubleClick(self.viewAxis, (int(pos[0]), int(pos[1]) ) )
             else:
-                super(InfiniteBlockedViewBox, self).mouseClickEvent(ev)
                 print "click in viewBox"
                 self.pixelLayers.mouseClickEvent(ev=ev, pos2d=pos, clickedViewBox=self)
 
