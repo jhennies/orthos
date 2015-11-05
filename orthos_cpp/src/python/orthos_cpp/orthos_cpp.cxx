@@ -201,19 +201,6 @@ void exportMaps(){
 }
 
 
-template<class T_IN, class LUT>
-vigra::NumpyAnyArray pyApplyLut(
-    const vigra::NumpyArray<1, T_IN> & data,
-    const LUT & lut,
-    vigra::NumpyArray<1, typename LUT::value_type>  out
-){
-    out.reshapeIfEmpty(data.shape());
-    {
-        vigra::PyAllowThreads _pythread;
-        to_rgba::applyLut(data, lut, out);
-    }
-    return out;
-}
 
 template<class T_IN, class LUT>
 vigra::NumpyAnyArray pyApplyLut2D(
@@ -231,13 +218,6 @@ vigra::NumpyAnyArray pyApplyLut2D(
 
 template<class T_IN, class LUT>
 void exportApplyLut(){
-    python::def("applyLut",vigra::registerConverters(&pyApplyLut<T_IN, LUT>),
-        (
-            python::arg("data"),
-            python::arg("lut"),
-            python::arg("out") = python::object()
-        )
-    );
 
     python::def("applyLut2D",vigra::registerConverters(&pyApplyLut2D<T_IN, LUT>),
         (
@@ -267,8 +247,8 @@ void exportNormalizedExplicitLut(
 
     python::class_<Lut>(clsName.c_str(), python::init<>())
         .def("__call__",&Lut::operator[])
-        .def_readwrite("minVal", &Lut::min_)
-        .def_readwrite("maxVal", &Lut::max_)
+        .def("setMinMax", &Lut::setMinMax)
+        .def_readonly("hasMinMax", &Lut::hasMinMax_)
         .def("setLutArray",vigra::registerConverters(&setLutArray<Lut>))
     ;
 
@@ -284,8 +264,8 @@ void exportNormalizedGray(
 
     python::class_<Lut>(clsName.c_str(), python::init<>())
         .def("__call__",&Lut::operator[])
-        .def_readonly("minVal", &Lut::min_)
-        .def_readonly("maxVal", &Lut::max_)
+        .def("setMinMax", &Lut::setMinMax)
+        .def_readonly("hasMinMax", &Lut::hasMinMax_)
     ;
     exportApplyLut<T, Lut>();
 }

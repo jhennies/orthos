@@ -184,8 +184,8 @@ class GrayscaleLayer(PixelLayerBase):
         self.cppLut = ValToRgba.normalizeAndColormap(dtype=self.inputDtype)()
         elut = self._ctrlWidget.makeLut()
         self.cppLut.setLutArray(elut)
-        self.cppLut.minVal = 0
-        self.cppLut.maxVal = 255
+        #self.cppLut.minVal = 0
+        #self.cppLut.maxVal = 255
 
     @abstractmethod
     def makeTileGraphicsItem(self,layer, tileItemGroup):
@@ -207,6 +207,11 @@ class GrayscaleLayer(PixelLayerBase):
         if changes:
             print "min max changed to ",minVal, maxVal
             self.sigMinMaxChanged.emit(minVal, maxVal)
+            if isinstance(minVal, (numpy.float32,numpy.float64)):
+                self.cppLut.setMinMax(float(minVal),float(maxVal))
+            else:
+                self.cppLut.setMinMax(long(minVal),long(maxVal))
+            self.sigCppLutChanged.emit()
 
     def makeCtrlWidget(self):
         if self._ctrlWidget is None:

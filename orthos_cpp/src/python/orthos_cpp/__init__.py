@@ -45,9 +45,16 @@ class ValToRgba(object):
 
 
     dtypeDict = {
-        numpy.uint8   : 'uint8',
-        numpy.uint16  : 'uint16',
-        numpy.uint32  : 'uint32',
+        numpy.uint8     : 'uint8',
+        numpy.uint16    : 'uint16',
+        numpy.uint32    : 'uint32',
+        numpy.uint64    : 'uint64',
+        numpy.int8      : 'int8',
+        numpy.int16     : 'int16',
+        numpy.int32     : 'int32',
+        numpy.int64     : 'int64',
+        numpy.float32   : 'float32',
+        numpy.float64   : 'float64'
     }
 
     @classmethod
