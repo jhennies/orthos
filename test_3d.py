@@ -31,13 +31,13 @@ if False:
 f = "/home/tbeier/Desktop/hhes/pmap_pipe/raw.h5"
 #f = "/media/tbeier/data/datasets/hhess/2x2x2nm_chunked/data.h5"
 rawSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
-rawLayer = GrayscaleLayer(name='raw',dataSource=rawSource)
+rawLayer = GrayscaleLayer(name='raw',levels='auto',dataSource=rawSource,useLut=True)
 
 
 # pmap layer
 f = "/home/tbeier/Desktop/hhes/pmap_pipe/pmap_c0.h5"
 pmapSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
-pmapLayer = GrayscaleLayer(name='pmap',levels=[0.0,1.0],dataSource=pmapSource)
+pmapLayer = GrayscaleLayer(name='pmap',levels='auto',dataSource=pmapSource,useLut=True)
 
 
 ## supervoxel layer

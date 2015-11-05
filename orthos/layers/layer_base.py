@@ -158,7 +158,7 @@ class GrayscaleLayer(PixelLayerBase):
     sigMinMaxChangedInternal = QtCore.Signal(object, object)
     sigMinMaxChanged = QtCore.Signal(object, object)
     sigCppLutChanged = QtCore.Signal()
-    def __init__(self,name, dataSource, levels='auto'):
+    def __init__(self,name, dataSource, levels='auto', useLut=False):
 
 
 
@@ -168,7 +168,7 @@ class GrayscaleLayer(PixelLayerBase):
         spatialBounds=((0,0,0), self.shape)
         timeBounds=(0,1)
         self.minMax = [None, None]
-
+        self.useLut = useLut
         self._ctrlWidget = None
             
         
@@ -181,9 +181,13 @@ class GrayscaleLayer(PixelLayerBase):
        
 
         self.inputDtype = dataSource.dtype
-        self.cppLut = ValToRgba.normalizeAndColormap(dtype=self.inputDtype)()
-        elut = self._ctrlWidget.makeLut()
-        self.cppLut.setLutArray(elut)
+        if useLut:
+            self.cppLut = ValToRgba.normalizeAndColormap(dtype=self.inputDtype)()
+        else:
+            self.cppLut = ValToRgba.normalize(dtype=self.inputDtype)()
+        if useLut:
+            elut = self._ctrlWidget.makeLut()
+            self.cppLut.setLutArray(elut)
         if levels is not 'auto':
             self.cppLut.setMinMax(levels[0],levels[1])
 
@@ -205,7 +209,6 @@ class GrayscaleLayer(PixelLayerBase):
             self.minMax[1] = maxVal 
             changes = True
         if changes:
-            print "min max changed to ",minVal, maxVal
             self.sigMinMaxChanged.emit(minVal, maxVal)
             if isinstance(minVal, (numpy.float32,numpy.float64)):
                 self.cppLut.setMinMax(float(minVal),float(maxVal))
@@ -219,20 +222,24 @@ class GrayscaleLayer(PixelLayerBase):
         return self._ctrlWidget
 
     def onGradientEditorChanged(self, gi):
-        elut = gi.getLookupTable(256,True)
-        print "SET ELUT"
-        self.cppLut.setLutArray(elut)
-        print "DONE"
-        self.sigGradientEditorChanged.emit(elut)
-        self.sigCppLutChanged.emit()
+        if self.useLut:
+            elut = gi.getLookupTable(256,True)
+            self.cppLut.setLutArray(elut)
+            self.sigGradientEditorChanged.emit(elut)
+            self.sigCppLutChanged.emit()
     def onTileUpdate(self, tileItem):
 
         def fetchData(item, ts, tileInfo, dataSource, oldMinMax):
             if tileInfo == item.tileInfo():
                 data = dataSource[tileInfo.slicing3d()].squeeze()
-                minVal = data.min()
-                maxVal = data.max()
+                
+
+                # if levels are automatic, we need to 
+                # search for the min max and see if it changed
                 if self.levels == 'auto':
+                    # search min and max simultaneously
+                    minVal = data.min()
+                    maxVal = data.max()
                     if(oldMinMax[0] is None or minVal<oldMinMax[0] or maxVal>oldMinMax[1]):
                         self.sigMinMaxChangedInternal.emit(minVal, maxVal)
 

@@ -63,13 +63,14 @@ class ValToRgba(object):
         cls = _orthos_cpp.__dict__['NormalizedExplicitLut_%s'%dtypeStr]
         return cls
 
-
-    def normalize(dtype, channels=None):
-        dtypeStr = dtype
+    @classmethod
+    def normalize(cls, dtype, channels=None):
+        dtypeStr = ValToRgba.dtypeDict[dtype]
         cls = _orthos_cpp.__dict__['NormalizedGray_%s'%dtypeStr]
         return cls
 
-    def unmodified(dtype, channels=None):
+    @classmethod
+    def unmodified(cls, dtype, channels=None):
         """
             only for values which naturally
             fall into the uint8 range.
@@ -80,10 +81,12 @@ class ValToRgba(object):
         """
         pass
 
-    def labelToImplicitRandom(dtype):
+    @classmethod
+    def labelToImplicitRandom(cls, dtype):
         pass
 
-    def sparseMappedExplicit(dtype):
+    @classmethod
+    def sparseMappedExplicit(cls, dtype):
         pass
 
 

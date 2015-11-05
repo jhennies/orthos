@@ -74,7 +74,9 @@ namespace to_rgba{
         }
         typedef UChar4 value_type;
         UChar4 operator[](const F  val)const{
-            return UChar4(normalizeToIndex(val, min_, max_, 256));
+            UChar4 res(normalizeToIndex(val, min_, max_, 256));
+            res[3] = 255;
+            return res;
         }
         bool needMinMax()const{
             return true;
