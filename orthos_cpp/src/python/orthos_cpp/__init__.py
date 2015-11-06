@@ -64,6 +64,25 @@ class ValToRgba(object):
         return cls
 
     @classmethod
+    def uintColormap(cls, dtype):
+        dtypeStr = ValToRgba.dtypeDict[dtype]
+        cls = _orthos_cpp.__dict__['UIntExplicitLut_%s'%dtypeStr]
+        return cls
+
+    @classmethod
+    def intToRandColor(cls, dtype):
+        dtypeStr = ValToRgba.dtypeDict[dtype]
+        cls = _orthos_cpp.__dict__['IntToRandLut_%s'%dtypeStr]
+        return cls
+
+    @classmethod
+    def uintSparseLut(cls, dtype):
+        dtypeStr = ValToRgba.dtypeDict[dtype]
+        cls = _orthos_cpp.__dict__['UIntSparseLut_%s'%dtypeStr]
+        return cls
+
+
+    @classmethod
     def normalize(cls, dtype, channels=None):
         dtypeStr = ValToRgba.dtypeDict[dtype]
         cls = _orthos_cpp.__dict__['NormalizedGray_%s'%dtypeStr]

@@ -198,6 +198,7 @@ void exportMaps(){
     
     exportMapT<V2UInt64, uint8_t >("Map_From_V2UInt64_To_Uint8");
     exportMapT<uint64_t, uint8_t >("Uint64_Uint8_Map");
+    exportMapT<uint32_t, uint8_t >("Uint32_Uint8_Map");
 }
 
 
@@ -255,6 +256,55 @@ void exportNormalizedExplicitLut(
     exportApplyLut<T, Lut>();
 }
 
+template<class T>
+void exportUIntExplicitLut(
+    const std::string & clsName
+){
+    typedef to_rgba::UIntExplicitLut<T> Lut;
+
+    python::class_<Lut>(clsName.c_str(), python::init<>())
+        .def("__call__",&Lut::operator[])
+        .def("setLutArray",vigra::registerConverters(&setLutArray<Lut>))
+    ;
+
+    exportApplyLut<T, Lut>();
+}
+
+
+template<class T>
+void exportUIntSparseLut(
+    const std::string & clsName
+){
+    typedef std::map<T, uint8_t> Map;
+    typedef to_rgba::UIntSparseLut<T, Map> Lut;
+
+    python::class_<Lut>(clsName.c_str(), python::init<const Map & >())
+        .def("__call__",&Lut::operator[])
+        .def("setLutArray",vigra::registerConverters(&setLutArray<Lut>))
+    ;
+
+    exportApplyLut<T, Lut>();
+}
+
+
+
+
+template<class T>
+void exportIntToRandRgbLut(
+    const std::string & clsName
+){
+    typedef to_rgba::IntToRandRgbLut<T> Lut;
+
+    python::class_<Lut>(clsName.c_str(), python::init<>())
+        .def("__call__",&Lut::operator[])
+        .def_readwrite("offset",&Lut::offset_)
+    ;
+
+    exportApplyLut<T, Lut>();
+}
+
+
+
 
 template<class T>
 void exportNormalizedGray(
@@ -304,6 +354,27 @@ void exportLuts(){
     exportNormalizedGray<int16_t>("NormalizedGray_int16");
     exportNormalizedGray<int32_t>("NormalizedGray_int32");
     exportNormalizedGray<int64_t>("NormalizedGray_int64");
+
+
+
+    exportUIntExplicitLut<uint8_t>("UIntExplicitLut_uint8");
+    exportUIntExplicitLut<uint16_t>("UIntExplicitLut_uint16");
+    exportUIntExplicitLut<uint32_t>("UIntExplicitLut_uint32");
+    exportUIntExplicitLut<uint64_t>("UIntExplicitLut_uint64");
+
+    exportIntToRandRgbLut<uint8_t>("IntToRandLut_uint8");
+    exportIntToRandRgbLut<uint16_t>("IntToRandLut_uint16");
+    exportIntToRandRgbLut<uint32_t>("IntToRandLut_uint32");
+    exportIntToRandRgbLut<uint64_t>("IntToRandLut_uint64");
+    exportIntToRandRgbLut<int8_t>("IntToRandLut_int8");
+    exportIntToRandRgbLut<int16_t>("IntToRandLut_int16");
+    exportIntToRandRgbLut<int32_t>("IntToRandLut_int32");
+    exportIntToRandRgbLut<int64_t>("IntToRandLut_int64");
+
+
+    exportUIntSparseLut<uint32_t>("UIntSparseLut_uint32");
+    exportUIntSparseLut<uint64_t>("UIntSparseLut_uint64");
+
 }
 
 

@@ -81,7 +81,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
 
 
         # new better tiling
-        self.tileGrid = TileGrid(self,0,tileGridShape=(10,10))
+        self.tileGrid = TileGrid(self,0,tileGridShape=(20,20))
         self.addItem(self.tileGrid)
         #navigation lines
         self.axis0Line = InfiniteLine(movable=True, angle=90,pen=pg.mkPen(color=axisColor(viewAxis[0]),width=3),

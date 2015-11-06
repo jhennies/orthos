@@ -313,3 +313,76 @@ class PaintLayerCtrl(LayerBaseCtrlWidget):
         def brushSizeSliderChanged(size):
             self.layer.onBrushSizeChanged(size)
         self.brushSizeSlider.sliderMoved.connect(brushSizeSliderChanged)
+
+
+class SuperVoxelLayerCtrl(LayerBaseCtrlWidget):
+
+    def __init__(self, layer):
+
+        super(SuperVoxelLayerCtrl,self).__init__(layer=layer)
+
+
+        # offset spin box
+        self.offsetSpinBox = QtGui.QSpinBox()
+        self.offsetSpinBox.setValue(1)
+        self.offsetSpinBox.setMinimum(0)
+        self.offsetSpinBox.setMaximum(1000)
+
+     
+
+
+        self.layerItemWidget = LayerItemWidget(layer)
+        self.layerItemWidget.nameLabel.setText(self.layer.name())
+
+        self.setupUI()
+        self.connectSignals()
+
+    def setupUI(self):
+       
+        baseLayout = QtGui.QHBoxLayout()
+        baseLayout.addWidget(self.offsetSpinBox)
+        self.mainLayout.addLayout(baseLayout)
+
+    def connectSignals(self):
+
+        # label spinbox changed
+        def offsetSpinBoxChanged(label):
+            self.layer.onOffsetChanged(label)
+        self.offsetSpinBox.valueChanged.connect(offsetSpinBoxChanged)
+
+
+
+class ObjectLayerCtrl(LayerBaseCtrlWidget):
+
+    def __init__(self, layer):
+
+        super(ObjectLayerCtrl,self).__init__(layer=layer)
+
+
+        # offset spin box
+        self.labelSpinBox = QtGui.QSpinBox()
+        self.labelSpinBox.setValue(1)
+        self.labelSpinBox.setMinimum(0)
+        self.labelSpinBox.setMaximum(255)
+
+     
+
+
+        self.layerItemWidget = LayerItemWidget(layer)
+        self.layerItemWidget.nameLabel.setText(self.layer.name())
+
+        self.setupUI()
+        self.connectSignals()
+
+    def setupUI(self):
+       
+        baseLayout = QtGui.QHBoxLayout()
+        baseLayout.addWidget(self.labelSpinBox)
+        self.mainLayout.addLayout(baseLayout)
+
+    def connectSignals(self):
+
+        # label spinbox changed
+        def labelSpinBoxChanged(label):
+            self.layer.onLabelChanged(label)
+        self.labelSpinBox.valueChanged.connect(labelSpinBoxChanged)

@@ -32,7 +32,8 @@ namespace to_rgba{
         NormalizedExplicitLut()
         :   min_(),
             max_(),
-            hasMinMax_(false)
+            hasMinMax_(false),
+            elut_()
         {
 
         }
@@ -62,6 +63,96 @@ namespace to_rgba{
 
         vigra::MultiArray<1, UChar4> elut_;
     };
+
+
+
+    template<class F>
+    struct UIntExplicitLut{
+    public:
+
+        UIntExplicitLut()
+        : elut_()
+        {
+
+        }
+
+        typedef UChar4 value_type;
+        UChar4 operator[](const F  val)const{
+            return elut_[val];
+        }
+
+        void setMinMax(const F minVal, const F maxVal){
+
+        }
+        bool needMinMax()const{
+            return false;
+        }
+        bool hasMinMax()const{
+            return true;
+        }
+        vigra::MultiArray<1, UChar4> elut_;
+    };
+
+
+    template<class F, class MAP>
+    struct UIntSparseLut{
+    public:
+
+        UIntSparseLut(const MAP & map)
+        :   map_(map),
+            elut_()
+
+        {
+
+        }
+
+        typedef UChar4 value_type;
+        UChar4 operator[](const F  val)const{
+            auto iter = map_.find(static_cast<typename MAP::key_type>(val));
+            if(iter == map_.end()){
+                return elut_[0];
+            }
+            else{
+                return elut_[iter->second];
+            }
+        }
+
+        void setMinMax(const F minVal, const F maxVal){
+
+        }
+        bool needMinMax()const{
+            return false;
+        }
+        bool hasMinMax()const{
+            return true;
+        }
+        const MAP & map_;
+        vigra::MultiArray<1, UChar4> elut_;
+
+    };
+
+
+
+    template<class F>
+    class IntToRandRgbLut{
+    public:
+        typedef UChar4 value_type;
+
+
+        UChar4 operator[](const F  val)const{
+            UChar4 res;
+            for(auto c=0; c<3; ++c){
+                auto fkey = std::sin(float(val+offset_))*1000.0+c;
+                res[c] = hash_(fkey ) %256;
+            }
+            res[3] = 255;
+            return res;
+        }
+
+        std::hash<float> hash_;
+        size_t offset_;
+    };
+
 
     template<class F>
     struct NormalizedGray{

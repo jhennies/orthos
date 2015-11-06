@@ -132,6 +132,15 @@ class LayerBase(QtCore.QObject):
         self.onTileUpdate(tileItem)
 
 
+
+
+class UpdateData(object):
+    def __init__(self,tileInfo,ts):
+        self.tileInfo = tileInfo
+        self.ts = ts
+
+
+
 class PixelLayerBase(LayerBase):
     def __init__(self, name, layerZValue=1, alpha=1.0, visible=True, 
                  spatialBounds=(None,None,None), 
@@ -142,62 +151,35 @@ class PixelLayerBase(LayerBase):
 
 
 
+class CppLutLayer(PixelLayerBase):
 
-class UpdateData(object):
-    def __init__(self,tileInfo,ts):
-        self.tileInfo = tileInfo
-        self.ts = ts
-
-
-
-
-
-class GrayscaleLayer(PixelLayerBase):
-
-    sigGradientEditorChanged = QtCore.Signal(object)
-    sigMinMaxChangedInternal = QtCore.Signal(object, object)
-    sigMinMaxChanged = QtCore.Signal(object, object)
     sigCppLutChanged = QtCore.Signal()
-    def __init__(self,name, dataSource, levels='auto', useLut=False):
+    _sigMinMaxChangedInternal = QtCore.Signal(object, object)
+    sigMinMaxChanged = QtCore.Signal(object, object)
 
-
+    def __init__(self, name, dataSource, cppLut, trackMinMax):
 
         self.dataSource = dataSource
         self.shape = self.dataSource.shape
-        self.levels = levels
         spatialBounds=((0,0,0), self.shape)
         timeBounds=(0,1)
+
+        super(CppLutLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
+
+        self.name
+        self.dataSource = dataSource
+        self.cppLut = cppLut
+        self.trackMinMax = trackMinMax
         self.minMax = [None, None]
-        self.useLut = useLut
-        self._ctrlWidget = None
-            
-        
-        super(GrayscaleLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
-        self.sigMinMaxChangedInternal.connect(self._onMinMaxValChangedInternal)
 
-        self._ctrlWidget = GrayScaleLayerCtrl(layer=self)
+        # signals
+        self._sigMinMaxChangedInternal.connect(self._onMinMaxValChangedInternal)
 
-
-       
-
-        self.inputDtype = dataSource.dtype
-        if useLut:
-            self.cppLut = ValToRgba.normalizeAndColormap(dtype=self.inputDtype)()
-        else:
-            self.cppLut = ValToRgba.normalize(dtype=self.inputDtype)()
-        if useLut:
-            elut = self._ctrlWidget.makeLut()
-            self.cppLut.setLutArray(elut)
-        if levels is not 'auto':
-            self.cppLut.setMinMax(levels[0],levels[1])
-
-    @abstractmethod
     def makeTileGraphicsItem(self,layer, tileItemGroup):
         ti = TileImageItem(layer=layer, tileItemGroup=tileItemGroup, cppLut = self.cppLut)
         self.sigAlphaChanged.connect(ti.setOpacity)
         self.sigVisibilityChanged.connect(ti.onChangeLayerVisible)
         self.sigCppLutChanged.connect(ti.cppLutChanged)
-        #self.sigGradientEditorChanged.connect(ti.setLookupTable)
         return ti
 
     def _onMinMaxValChangedInternal(self, minVal, maxVal):
@@ -216,17 +198,6 @@ class GrayscaleLayer(PixelLayerBase):
                 self.cppLut.setMinMax(long(minVal),long(maxVal))
             self.sigCppLutChanged.emit()
 
-    def makeCtrlWidget(self):
-        if self._ctrlWidget is None:
-            self._ctrlWidget = GrayScaleLayerCtrl(layer=self)
-        return self._ctrlWidget
-
-    def onGradientEditorChanged(self, gi):
-        if self.useLut:
-            elut = gi.getLookupTable(256,True)
-            self.cppLut.setLutArray(elut)
-            self.sigGradientEditorChanged.emit(elut)
-            self.sigCppLutChanged.emit()
     def onTileUpdate(self, tileItem):
 
         def fetchData(item, ts, tileInfo, dataSource, oldMinMax):
@@ -236,12 +207,12 @@ class GrayscaleLayer(PixelLayerBase):
 
                 # if levels are automatic, we need to 
                 # search for the min max and see if it changed
-                if self.levels == 'auto':
+                if self.trackMinMax :
                     # search min and max simultaneously
                     minVal = data.min()
                     maxVal = data.max()
                     if(oldMinMax[0] is None or minVal<oldMinMax[0] or maxVal>oldMinMax[1]):
-                        self.sigMinMaxChangedInternal.emit(minVal, maxVal)
+                        self._sigMinMaxChangedInternal.emit(minVal, maxVal)
 
                 qimg = item.preRender(data)
                 item.setImageToUpdateFrom(data,ts, qimg=qimg)
@@ -262,42 +233,136 @@ class GrayscaleLayer(PixelLayerBase):
         print "layer",self.name(),"clicked at",pos2d
 
 
+class GrayscaleLayer(CppLutLayer):
+
+    sigGradientEditorChanged = QtCore.Signal(object)
+
+
+    def __init__(self,name, dataSource, levels='auto', useLut=False, lut='widget'):
+
+
+        self.levels = levels
+        self.useLut = useLut
+        self._ctrlWidget = None
+        
+        self.inputDtype = dataSource.dtype
+        if useLut:
+            cppLut = ValToRgba.normalizeAndColormap(dtype=self.inputDtype)()
+        else:
+            cppLut = ValToRgba.normalize(dtype=self.inputDtype)()
+        if levels is not 'auto':
+            cppLut.setMinMax(levels[0],levels[1])
+
+        super(GrayscaleLayer,self).__init__(name=name,dataSource=dataSource, cppLut=cppLut, trackMinMax=levels=='auto')
+        self._ctrlWidget = GrayScaleLayerCtrl(layer=self)
+        if useLut:
+            elut = self._ctrlWidget.makeLut()
+            cppLut.setLutArray(elut)
+        
+    def makeCtrlWidget(self):
+        if self._ctrlWidget is None:
+            self._ctrlWidget = GrayScaleLayerCtrl(layer=self)
+        return self._ctrlWidget
+
+    def onGradientEditorChanged(self, gi):
+        if self.useLut:
+            elut = gi.getLookupTable(256,True)
+            self.cppLut.setLutArray(elut)
+            self.sigCppLutChanged.emit()
 
 
 
-class PaintLayer(PixelLayerBase):
+class SupervoxelLayer(CppLutLayer):
+    def __init__(self,name, dataSource):
 
-    sigBrushSizeChanged = QtCore.Signal(object)
+    
+        self.inputDtype = dataSource.dtype
+        cppLut = ValToRgba.intToRandColor(dtype=self.inputDtype)()
+        super(SupervoxelLayer,self).__init__(name=name,dataSource=dataSource, cppLut=cppLut, trackMinMax=False)
+
+    def makeCtrlWidget(self):
+        return SuperVoxelLayerCtrl(layer=self)
+
+    def onOffsetChanged(self, offset):
+        self.cppLut.offset = offset
+        self.sigCppLutChanged.emit()
+
+
+class ObjectLayer(CppLutLayer):
+    def __init__(self,name, dataSource, objectLabels = None):
+
+        if objectLabels is None:
+            self.objectLabels = Uint32_Uint8_Map()
+        
+        self.labelColors = [
+            [0,0,0,0],
+            [255,0,0,255],
+            [0,255,0,255],
+            [255,0,255,255],
+        ]
+        self.label = 1
+        self.labelColors = numpy.array(self.labelColors,dtype='uint8')
+        self.inputDtype = dataSource.dtype
+        cppLut = ValToRgba.uintSparseLut(dtype=self.inputDtype)(self.objectLabels)
+        cppLut.setLutArray(self.labelColors)
+        super(ObjectLayer,self).__init__(name=name,dataSource=dataSource, cppLut=cppLut, trackMinMax=False)
+
+
+    def makeTileGraphicsItem(self,layer, tileItemGroup):
+        ti = TileVoxelImageItem(layer=layer, tileItemGroup=tileItemGroup, cppLut = self.cppLut)
+        self.sigAlphaChanged.connect(ti.setOpacity)
+        self.sigVisibilityChanged.connect(ti.onChangeLayerVisible)
+        self.sigCppLutChanged.connect(ti.cppLutChanged)
+        return ti
+
+    def makeCtrlWidget(self):
+        return ObjectLayerCtrl(layer=self)
+
+    def onOffsetChanged(self, offset):
+        self.cppLut.offset = offset
+        self.sigCppLutChanged.emit()
+
+    def onLabelChanged(self, label):
+        self.label = label
+
+
+class PaintLayer(CppLutLayer):
+
+
     sigLabelChanged = QtCore.Signal(object)
+    sigBrushSizeChanged = QtCore.Signal(object)
 
 
-    def __init__(self,name,dataSource):
+    def __init__(self,name, dataSource):
 
 
         self.labelColors = [
-            [0,0,0],
-            [255,0,0],
-            [0,255,0],
-            [255,0,255],
+            [0,0,0,0],
+            [255,0,0,255],
+            [0,255,0,255],
+            [255,0,255,255],
         ]
+        self.labelColors = numpy.array(self.labelColors,dtype='uint8')
+        
+        self.inputDtype = dataSource.dtype
+        cppLut = ValToRgba.uintColormap(self.inputDtype)()
+        cppLut.setLutArray(self.labelColors)
+        super(PaintLayer,self).__init__(name=name,dataSource=dataSource, cppLut=cppLut, trackMinMax=False)
 
-        self.dataSource = dataSource
-        self.shape = dataSource.shape
-        spatialBounds=((0,0,0), self.shape)
-        timeBounds=(0,1)
-        super(PaintLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
 
-        self.paintRad = 0
-        self.levels=(0,255)
-
+        
     @abstractmethod
     def makeTileGraphicsItem(self,layer, tileItemGroup):
-        ti = TilePaintImage(layer=layer, tileItemGroup=tileItemGroup,labelColors=self.labelColors)
+        ti = TilePaintImage(layer=layer, tileItemGroup=tileItemGroup,labelColors=self.labelColors,cppLut=self.cppLut)
         self.sigAlphaChanged.connect(ti.setOpacity)
         self.sigVisibilityChanged.connect(ti.onChangeLayerVisible)
         self.sigLabelChanged.connect(ti.onLabelChanged)
         self.sigBrushSizeChanged.connect(ti.onBrushSizeChanged)
         return ti
+
+    def makeCtrlWidget(self):
+        return PaintLayerCtrl(layer=self)
+
 
     def onLabelChanged(self, label):
         self.sigLabelChanged.emit(label)
@@ -305,38 +370,6 @@ class PaintLayer(PixelLayerBase):
     def onBrushSizeChanged(self, size):
         self.sigBrushSizeChanged.emit(size)
 
-    def makeCtrlWidget(self):
-        return PaintLayerCtrl(layer=self)
-
-
-
-    def onTileUpdate(self, tileItem):
-
-
-        def fetchData(item, ts, tileInfo, dataSource):
-            if tileInfo == item.tileInfo():
-                data = dataSource[tileInfo.slicing3d()].squeeze()
-                dataRGBA = numpy.zeros(tileInfo.roi2d.shape+(4,) ,dtype='uint8')
-                lut = numpy.array(self.labelColors)
-                dataRGBA[:,:,0:3] = numpy.take(lut, data, axis=0, mode='clip') 
-                dataA   = dataRGBA[:,:,3] 
-                dataA[numpy.where(data!=0)] = 255
-
-                qimg = item.preRender(dataRGBA)
-                item.setImageToUpdateFrom(dataRGBA,ts,qimg=qimg)
-
-
-                d = UpdateData(tileInfo,ts)
-                item.updateQueue.sigUpdateFinished.emit(d)
-    
-
-        # add task to pool
-        tileInfo = tileItem.tileInfo().copy()
-        ts = time.clock()
-        task = Task(fetchData,tileItem, ts,tileInfo, self.dataSource)
-        future = self.threadPool.submit(task=task, onTaskFinished=noErrorIfTaskCanceled)
-        # add future to queue
-        tileItem.updateQueue.addFuture(future)
 
 
 
@@ -369,70 +402,16 @@ class PaintLayer(PixelLayerBase):
 
 
 
-    def mouseClickEvent(self, ev, pos2d, clickedViewBox):
-        #print "layer",self.name(),"clicked at",pos2d
-        pass
 
 
 
 
 
-class SupervoxelLayer(PixelLayerBase):
-
-    sigGradientEditorChanged = QtCore.Signal(object)
-
-    def __init__(self,name,dataSource, lut):
-        self.lut = lut
-        self.dataSource = dataSource
-        self.shape = self.dataSource.shape
-        spatialBounds=((0,0,0), self.shape)
-        timeBounds=(0,1)
-        self.levels = (0,255)
-        super(SupervoxelLayer,self).__init__(name=name,spatialBounds=spatialBounds,timeBounds=timeBounds)
-
-    @abstractmethod
-    def makeTileGraphicsItem(self,layer, tileItemGroup):
-        ti = TileImageItem(layer=layer,tileItemGroup=tileItemGroup)
-        self.sigAlphaChanged.connect(ti.setOpacity)
-        self.sigVisibilityChanged.connect(ti.onChangeLayerVisible)
-        self.sigGradientEditorChanged.connect(ti.setLookupTable)
-        return ti
-
-    #ef makeCtrlWidget(self):
-    #   return GrayScaleLayerCtrl(layer=self)
-
-
-    def onTileUpdate(self, tileItem):
-
-        def fetchData(item, ts, tileInfo, dataSource):
-            if tileInfo == item.tileInfo():
-                data = dataSource[tileInfo.slicing3d()].squeeze()
-                data = numpy.take(self.lut,data,axis=0).astype('uint8')
-                qimg = item.preRender(data)
-                item.setImageToUpdateFrom(data,ts,qimg=qimg)
-                d = UpdateData(tileInfo,ts)
-                item.updateQueue.sigUpdateFinished.emit(d)
-
-
-        # add task to pool
-        tileInfo = tileItem.tileInfo().copy()
-        ts = time.clock()
-        task = Task(fetchData,tileItem, ts,tileInfo, self.dataSource)
-        future = self.threadPool.submit(task=task, onTaskFinished=noErrorIfTaskCanceled)
-        # add future to queue
-        tileItem.updateQueue.addFuture(future)
-
-    def mouseClickEvent(self, ev, pos2d, clickedViewBox):
-        print "layer",self.name(),"clicked at",pos2d
 
 
 
-class SupervoxelObjectLayer(SupervoxelLayer):
 
-    sigGradientEditorChanged = QtCore.Signal(object)
 
-    def __init__(self,name,dataSource, lut):
-        super(SupervoxelObjectLayer,self).__init__(name=name,dataSource=dataSource,lut=lut)
 
 
 

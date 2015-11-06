@@ -366,20 +366,75 @@ class TileImageItem(ImageItemBase, TileItemMixIn):
 
 
 
+class TileVoxelImageItem(ImageItemBase, TileItemMixIn):
+
+    def __init__(self, layer, tileItemGroup, cppLut):
+        self.setNewImageLock = threading.Lock()  
+        BaseImageItem = ImageItemBase
+        BaseImageItem.__init__(self, cppLut=cppLut)   
+        TileItemMixIn.__init__(self,layer=layer, tileItemGroup=tileItemGroup)
+        self.lastStemp = time.clock()
+        self.newImgDict = dict()
+        self.label = 1
+    def onUpdateFinished(self, updateData):
+        #print "update finished",updateData.pos
+        ts = updateData.ts
+        #print ts
+        #print "own ts",self.lastStemp,"update ts",ts
+        if ts >= self.lastStemp:
+            #print "FRESH UPDATE"
+            self.setNewImageLock.acquire()
+            self.setPos(*updateData.tileInfo.roi2d.begin)
+            self.lastStemp = ts
+            newImg,qimg = self.newImgDict.pop(ts)
+            self.setImage(newImg, qimg=qimg)
+            #print self.levels
+            self.setNewImageLock.release()
+        else:
+            #print "bad updatre"
+            self.setNewImageLock.acquire()
+            self.newImgDict.pop(ts)
+            self.setNewImageLock.release()
+
+    def setImageToUpdateFrom(self, newImage, ts, qimg=None):
+        self.setNewImageLock.acquire()
+        self.newImgDict[ts] = ( newImage.copy(), qimg)
+        self.setNewImageLock.release()
+
+    def mouseClickEvent(self, ev, double=False):
+        pos = ev.pos()
+        x = int(pos.x())
+        y = int(pos.y())
+        spLabel = self.image[x,y]
+
+        label = self.layer.label
+        if label == 0 :
+            del self.layer.objectLabels[long(spLabel)]
+        else:
+            self.layer.objectLabels[long(spLabel)] = label
+        self.layer.objectLabels[long(spLabel)] = self.layer.label
+        self.layer.sigCppLutChanged.emit()
+
+    def onLabelChanged(self, label):
+        self.label = label
+
+
+
+
+
+
 
 
 
 class TilePaintImage(ImageItemBase, TileItemMixIn):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, layer, tileItemGroup, cppLut, labelColors):
 
-        self.labelColors = kwargs.pop('labelColors')
 
+        self.labelColors = labelColors
         self.setNewImageLock = threading.Lock()  
         BaseImageItem = ImageItemBase
-        layer = kwargs.pop('layer')
-        tileItemGroup = kwargs.pop('tileItemGroup')
-        BaseImageItem.__init__(self, *args, **kwargs)   
+        BaseImageItem.__init__(self, cppLut=cppLut)   
         TileItemMixIn.__init__(self,layer=layer, tileItemGroup=tileItemGroup)
         self.lastStemp = time.clock()
         self.newImgDict = dict()
@@ -396,12 +451,12 @@ class TilePaintImage(ImageItemBase, TileItemMixIn):
 
     def onLabelChanged(self, label):
         self.label = label
-        c = self.labelColors[self.label]
+        c = self.labelColors[self.label,:]
 
 
     def onBrushSizeChanged(self, brushRad):
         self.brushRad = brushRad
-        c = self.labelColors[self.label]
+        c = self.labelColors[self.label,:]
         
 
 
@@ -413,7 +468,7 @@ class TilePaintImage(ImageItemBase, TileItemMixIn):
             self.setPos(*updateData.tileInfo.roi2d.begin)
             self.lastStemp = ts
             newImg,qimg = self.newImgDict.pop(ts)
-            self.setImage(newImg,levels=self.layer.levels, qimg=qimg)
+            self.setImage(newImg, qimg=qimg)
             self.setNewImageLock.release()
         else:
             self.setNewImageLock.acquire()
@@ -453,7 +508,7 @@ class TilePaintImage(ImageItemBase, TileItemMixIn):
             if True:#pos[0]>=0 and pos[0]<s2d[0] and pos[1]>=0 and pos[1]<s2d[1]:
                 ev.accept()
 
-                c = tuple(self.labelColors[self.label])+(75,)
+                c = tuple(self.labelColors[self.label,:])#+(75,)
                 w = (self.brushRad*2+1)/self.viewBox.viewPixelSize()[0]
                 self.pathItem.setPen(pg.mkPen(color=c,width=w))
 
