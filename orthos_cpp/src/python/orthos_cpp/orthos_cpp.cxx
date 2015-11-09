@@ -97,10 +97,10 @@ void exportDrawing(){
 }
 
 
-
+template<class TGM>
 python::tuple 
 updateCurrentRoi(
-    TileGridManager & tgm,
+    TGM & tgm,
     const Float2 & begin,
     const Float2 & end
 ){
@@ -113,25 +113,27 @@ updateCurrentRoi(
 }
 
 
+template<class TGM>
 vigra::NumpyAnyArray
-visibleBlocks(const TileGridManager &tgm){
+visibleBlocks(const TGM & tgm){
     vigra::NumpyArray<1,uint64_t> vb(Shape1(tgm.nVisibleTiles()));
     tgm.visibleBlocks(vb.begin(), vb.end());
     return vb;
 }
 
+template<class TGM>
 vigra::NumpyAnyArray
-visibleTiles(const TileGridManager &tgm){
+visibleTiles(const TGM & tgm){
     vigra::NumpyArray<1,uint64_t> vb(Shape1(tgm.nVisibleTiles()));
     tgm.visibleTiles(vb.begin(), vb.end());
     return vb;
 }
 
 
-
+template<class TGM>
 vigra::NumpyAnyArray
 visibleTilesInRoi2D(
-    const TileGridManager &tgm,
+    const TGM & tgm,
     const Shape2 & roiBegin,
     const Shape2 & roiEnd
 ){
@@ -141,9 +143,10 @@ visibleTilesInRoi2D(
     return vta;
 }
 
+template<class TGM>
 vigra::NumpyAnyArray
 visibleTilesInRoi3D(
-    const TileGridManager &tgm,
+    const TGM & tgm,
     const Shape3 & roiBegin,
     const Shape3 & roiEnd
 ){
@@ -159,26 +162,41 @@ visibleTilesInRoi3D(
 void exportTileGrid(){
 
 
-    python::class_<TileGridManager>(
-        "TileGridManager",
-        python::init<const Blocking2d &, const Shape2d, size_t,const Shape2d>()
-    )
-        .def("updateTimeCoordinate",&TileGridManager::updateTimeCoordinate)
-        .def("updateScrollCoordinate",&TileGridManager::updateScrollCoordinate)
-        .def("updateCurrentRoi",vigra::registerConverters(updateCurrentRoi))
-        .def("tileInfo",&TileGridManager::tileInfo,python::return_internal_reference<>())
-        .def("nVisibleTiles",&TileGridManager::nVisibleTiles)
-        .def("visibleBlocks",vigra::registerConverters(&visibleBlocks))
-        .def("visibleTiles",vigra::registerConverters(&visibleTiles))
-        .def("visibleTilesInRoi2D",vigra::registerConverters(&visibleTilesInRoi2D))
-        .def("visibleTilesInRoi3D",vigra::registerConverters(&visibleTilesInRoi3D))
-    ;
+    {
+        typedef TileGridManager Tgm;
+        python::class_<Tgm>(
+            "TileGridManager",
+            python::init<const Blocking2d &, const Shape2d, size_t,const Shape2d>()
+        )
+            .def("updateTimeCoordinate",&Tgm::updateTimeCoordinate)
+            .def("updateScrollCoordinate",&Tgm::updateScrollCoordinate)
+            .def("tileInfo",&Tgm::tileInfo,python::return_internal_reference<>())
+            .def("nVisibleTiles",&Tgm::nVisibleTiles)
+            .def("updateCurrentRoi",vigra::registerConverters(updateCurrentRoi<Tgm>))
+            .def("visibleBlocks",vigra::registerConverters(&visibleBlocks<Tgm>))
+            .def("visibleTiles",vigra::registerConverters(&visibleTiles<Tgm>))
+            .def("visibleTilesInRoi2D",vigra::registerConverters(&visibleTilesInRoi2D<Tgm>))
+            .def("visibleTilesInRoi3D",vigra::registerConverters(&visibleTilesInRoi3D<Tgm>))
+        ;
+    }   
 
-    python::class_<StaticTileGridManager>(
-        "StaticTileGridManager",
-        python::init<const Blocking2d &, size_t,const Shape2d>()
-    )
-    ;
+    {
+        typedef StaticTileGridManager Tgm;
+        python::class_<Tgm>(
+            "StaticTileGridManager",
+            python::init<const Blocking2d &, size_t,const Shape2d>()
+        )
+            .def("updateTimeCoordinate",&Tgm::updateTimeCoordinate)
+            .def("updateScrollCoordinate",&Tgm::updateScrollCoordinate)
+            .def("tileInfo",&Tgm::tileInfo,python::return_internal_reference<>())
+            .def("nVisibleTiles",&Tgm::nVisibleTiles)
+            .def("updateCurrentRoi",vigra::registerConverters(updateCurrentRoi<Tgm>))
+            //.def("visibleBlocks",vigra::registerConverters(&visibleBlocks<Tgm>))
+            .def("visibleTiles",vigra::registerConverters(&visibleTiles<Tgm>))
+            .def("visibleTilesInRoi2D",vigra::registerConverters(&visibleTilesInRoi2D<Tgm>))
+            .def("visibleTilesInRoi3D",vigra::registerConverters(&visibleTilesInRoi3D<Tgm>))
+        ;
+    }
 
 
 

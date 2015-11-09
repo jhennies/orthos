@@ -130,9 +130,10 @@ class DynamicTileGrid(pg.ItemGroup):
             yield visibleTilesItem[layerName]
 
 
+
 class StaticTileGrid(pg.ItemGroup):
     def __init__(self,viewBox,blockingIndex):
-
+        super(StaticTileGrid,self).__init__()
         self.viewBox = viewBox
         self.scrollAxis = self.viewBox.scrollAxis
         self.mlBlocking = viewBox.navigator.mlBlocking
@@ -143,3 +144,20 @@ class StaticTileGrid(pg.ItemGroup):
         # number of tiles == number of 2d blocks
         self.nTiles = len(self.blocking2d)
         self.tileItems = [None for x in range(self.nTiles)]
+
+        # cpp tile grid manager
+        self.tileGridManager = orthos_cpp.StaticTileGridManager(self.blocking2d, self.viewBox.scrollAxis, self.viewBox.viewAxis)
+        # connect 
+        self.viewBox.sigRectChanged.connect(self.onViewBoxViewRectChanged)
+
+    def onViewBoxViewRectChanged(self):
+        print "ON VIEW BOX RECT CHANGE"
+        minCoord, maxCoord = self.viewBox.integralViewBounds2()
+        aTiles,dTiles = self.tileGridManager.updateCurrentRoi(minCoord, maxCoord)
+        if(len(dTiles)>0):
+            print "dTiles",dTiles
+            #self.onTilesDisappear(dTiles)
+
+        if(len(aTiles)>0):
+            print "atiles",aTiles
+            #self.onTilesAppear(aTiles)

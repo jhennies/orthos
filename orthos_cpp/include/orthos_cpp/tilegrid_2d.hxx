@@ -524,8 +524,121 @@ public:
         tileInfos_(blocking2d_.numBlocks())
     {
     }
-public:
+    const TileInfo & tileInfo(const size_t ti)const{
+        ORTHOS_CHECK_OP(ti,<,tileInfos_.size(),"");
+        return tileInfos_[ti];
+    }
+    bool updateCurrentRoi(
+        const Float2 & begin, 
+        const Float2 & end,
+        std::vector<size_t> & appeared,
+        std::vector<size_t> & disappeared
+    ){
+        //////////////////////////////////////////////////////////////////////////////
+        // check which blocks appeared and which disappeared
+        const auto changed = visibleBlocksManager_.updateCurrentRoi(begin, end, appeared,disappeared);
+        
+        if(changed){
 
+            //////////////////////////////////////////////////////////////////////////////
+            // map block indexes to tile indexes
+            ///////////////////////////////////////////////////////////////////////////////
+            
+            // disappear
+            for(const auto  ti  : disappeared){
+                auto & tileInfo = tileInfos_[ti];
+                tileInfo.tileVisible = false;
+            }
+            // appear
+            for(const auto  ti: appeared){
+                auto & tileInfo = tileInfos_[ti];
+                tileInfo.tileVisible = true;
+                tileInfo.scrollCoordinate = scrollCoordinate_;
+                tileInfo.timeCoordinate = timeCoordinate_;
+                tileInfo.roi2d = blocking2d_.blockBegin()[ti];
+
+                Shape3 begin3d,end3d;
+                begin3d[scrollAxis_] = scrollCoordinate_;
+                end3d[scrollAxis_] = scrollCoordinate_+1;
+                begin3d[viewAxis_[0]] = tileInfo.roi2d.begin()[0];
+                begin3d[viewAxis_[1]] = tileInfo.roi2d.begin()[1];
+                end3d[viewAxis_[0]] = tileInfo.roi2d.end()[0];
+                end3d[viewAxis_[1]] = tileInfo.roi2d.end()[1];
+
+                tileInfo.roi3d = Block3d(begin3d, end3d);
+            }
+        }
+
+    }
+
+    size_t nVisibleTiles()const{
+        return visibleBlocksManager_.visibleBlocks().size();
+    }
+
+
+    template<class OUT_ITER>
+    void visibleTiles(OUT_ITER begin, OUT_ITER end)const{
+        const auto & vt = visibleBlocksManager_.visibleBlocks();
+        std::copy(vt.begin(), vt.end(), begin);
+    }
+
+
+
+    std::vector<size_t> 
+    visibleTilesInRoi2D(
+        Shape2d roiBegin,
+        Shape2d roiEnd
+    )const{
+        std::vector<size_t> visibleTiles;
+        const Block2d testBlock(roiBegin, roiEnd);
+        for(const auto bi : visibleBlocksManager_.visibleBlocks()){
+            const auto block = blocking2d_.blockBegin()[bi];
+            if(testBlock.intersects(block)){
+                visibleTiles.push_back(bi);
+            }
+        }
+        return std::move(visibleTiles);
+    }
+
+
+    std::vector<size_t> 
+    visibleTilesInRoi3D(
+        Shape3 roiBegin,
+        Shape3 roiEnd
+    )const{
+       if(roiBegin[scrollAxis_]<= scrollCoordinate_ && scrollCoordinate_<roiEnd[scrollAxis_]){
+            const Shape2d roiBegin2D(roiBegin[viewAxis_[0]], roiBegin[viewAxis_[1]]);
+            const Shape2d roiEnd2D(roiEnd[viewAxis_[0]], roiEnd[viewAxis_[1]]);
+            return visibleTilesInRoi2D(roiBegin2D, roiEnd2D);
+       }
+       else{
+            std::vector<size_t> res;
+            return std::move(res);
+       }
+    }
+
+
+
+
+    void updateScrollCoordinate(const uint64_t scrollCoordinate){
+        scrollCoordinate_ = scrollCoordinate;
+        for(auto ti : visibleBlocksManager_.visibleBlocks()){
+            auto & tileInfo  = tileInfos_[ti];
+            tileInfo.scrollCoordinate = scrollCoordinate_;
+            Shape3 begin3d = tileInfo.roi3d.begin();
+            Shape3 end3d = tileInfo.roi3d.end();
+            begin3d[scrollAxis_] = scrollCoordinate_;
+            end3d[scrollAxis_] = scrollCoordinate_+1;
+            tileInfo.roi3d = Block3d(begin3d, end3d);
+        }
+    }
+
+    void updateTimeCoordinate(const uint64_t timeCoordinate){
+        timeCoordinate_ = timeCoordinate;
+        for(auto ti : visibleBlocksManager_.visibleBlocks()){
+            tileInfos_[ti].timeCoordinate = timeCoordinate_;
+        }
+    }
     const Blocking2d  blocking2d_;
     size_t scrollAxis_;
     Shape2d viewAxis_;

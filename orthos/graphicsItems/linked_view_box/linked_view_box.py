@@ -86,6 +86,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
         self.staticTileGrid = StaticTileGrid(self,0)
         
         self.addItem(self.tileGrid)
+        #self.addItem(self.staticTileGrid)
         #navigation lines
         self.axis0Line = InfiniteLine(movable=True, angle=90,pen=pg.mkPen(color=axisColor(viewAxis[0]),width=3),
                                       bounds=[0,self.viewSpatialShape[0]-1]) 
