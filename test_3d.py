@@ -28,31 +28,39 @@ if False:
     f.close()
 
 
-f = "/home/tbeier/Desktop/input/raw.h5"
-#f = "/media/tbeier/data/datasets/hhess/2x2x2nm_chunked/data.h5"
-rawSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
-rawLayer = GrayscaleLayer(name='raw',levels=[0,255],dataSource=rawSource,useLut=True)
+with vigra.Timer("create raw layer"):
+    f = "/home/tbeier/Desktop/input/raw.h5"
+    #f = "/media/tbeier/data/datasets/hhess/2x2x2nm_chunked/data.h5"
+    rawSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
+    rawLayer = GrayscaleLayer(name='raw',levels=[0,255],dataSource=rawSource,useLut=True)
 
 
-# pmap layer
-f = "/home/tbeier/Desktop/input/pmap_c0.h5"
-pmapSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
-pmapLayer = GrayscaleLayer(name='pmap',levels='auto',dataSource=pmapSource,useLut=True)
+
+if False:
+    with vigra.Timer("create pmap layer"):
+        # pmap layer
+        f = "/home/tbeier/Desktop/input/pmap_c1.h5"
+        pmapSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
+        pmapLayer = GrayscaleLayer(name='pmap',levels='auto',dataSource=pmapSource,useLut=True)
 
 
-## supervoxel layer
-f = "/home/tbeier/Desktop/input/superpixels_10000c.h5"
-superVoxelSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
-superVoxelLayer = SupervoxelLayer(name='sv',dataSource=superVoxelSource)
-objectLayer = ObjectLayer(name='obj',dataSource=superVoxelSource)
+    with vigra.Timer("create sv layer"):
+        ## supervoxel layer
+        f = "/home/tbeier/Desktop/input/superpixels_10000c.h5"
+        superVoxelSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data')
+        superVoxelLayer = SupervoxelLayer(name='sv',dataSource=superVoxelSource)
+        objectLayer = ObjectLayer(name='obj',dataSource=superVoxelSource)
 
-# paint layer
-f = "/home/tbeier/Desktop/input/labels_out.h5"
-labelsSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data',shape=rawSource.shape,
-                                     mode=vigra.HDF5Mode.ReadWrite, compression=vigra.Compression.ZLIB_FAST,
-                                     chunk_shape=[64,64,64],dtype='uint8')
-paintLayer = PaintLayer(name="paint",dataSource=labelsSource)
 
+    with vigra.Timer("create paint layer"):
+        # paint layer
+        f = "/home/tbeier/Desktop/input/labels_out.h5"
+        labelsSource = VigraChunkedArrayHdf5(file_name=f,dataset_name='data',shape=rawSource.shape,
+                                             mode=vigra.HDF5Mode.ReadWrite, compression=vigra.Compression.ZLIB_FAST,
+                                             chunk_shape=[64,64,64],dtype='uint8')
+        paintLayer = PaintLayer(name="paint",dataSource=labelsSource)
+
+        #paintLayer = SplinePaintLayer(name="paint",dataSource=labelsSource)
 
 
 
@@ -68,14 +76,25 @@ spatialShape = rawSource.shape
 opt = LayerViewerOptions()
 opt.spatialDimensions = 3
 opt.hasTimeAxis = False
-viewerWidget = LayerViewerWidget(spatialShape=spatialShape, options=opt)
-mw.setCentralWidget(viewerWidget)
-viewerWidget.addLayer(rawLayer)
-viewerWidget.addLayer(pmapLayer)
-viewerWidget.addLayer(superVoxelLayer)
-viewerWidget.addLayer(objectLayer)
-viewerWidget.addLayer(paintLayer)
-viewerWidget.rangeChanged()
+
+with vigra.Timer("create viewer"):
+    viewerWidget = LayerViewerWidget(spatialShape=spatialShape, options=opt)
+    mw.setCentralWidget(viewerWidget)
+
+with vigra.Timer("add raw layer"):
+    viewerWidget.addLayer(rawLayer)
+if False:
+    with vigra.Timer("add pmap layer"):
+        viewerWidget.addLayer(pmapLayer)
+    with vigra.Timer("add sv layer"):
+        viewerWidget.addLayer(superVoxelLayer)
+    with vigra.Timer("add obj layer"):
+        viewerWidget.addLayer(objectLayer)
+    with vigra.Timer("add paint layer"):
+        viewerWidget.addLayer(paintLayer)
+
+with vigra.Timer("range changed"):
+    viewerWidget.rangeChanged()
 
 def closeCallback():
     labelsSource.flushToDisk()

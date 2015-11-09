@@ -157,6 +157,8 @@ visibleTilesInRoi3D(
 
 
 void exportTileGrid(){
+
+
     python::class_<TileGridManager>(
         "TileGridManager",
         python::init<const Blocking2d &, const Shape2d, size_t,const Shape2d>()
@@ -171,6 +173,16 @@ void exportTileGrid(){
         .def("visibleTilesInRoi2D",vigra::registerConverters(&visibleTilesInRoi2D))
         .def("visibleTilesInRoi3D",vigra::registerConverters(&visibleTilesInRoi3D))
     ;
+
+    python::class_<StaticTileGridManager>(
+        "StaticTileGridManager",
+        python::init<const Blocking2d &, size_t,const Shape2d>()
+    )
+    ;
+
+
+
+
 
     python::class_<TileInfo>("TileInfo",python::init<>())
         .def("copy",&TileInfo::copy)

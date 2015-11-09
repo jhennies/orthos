@@ -335,6 +335,8 @@ class TileImageItem(ImageItemBase, TileItemMixIn):
         TileItemMixIn.__init__(self,layer=layer, tileItemGroup=tileItemGroup)
         self.lastStemp = time.clock()
         self.newImgDict = dict()
+        self.onMouseClickCallback = None
+
     def onUpdateFinished(self, updateData):
         #print "update finished",updateData.pos
         ts = updateData.ts
@@ -363,61 +365,9 @@ class TileImageItem(ImageItemBase, TileItemMixIn):
     def mouseClickEvent(self, ev, double=False):
         print "click in image",ev.pos()
 
-
-
-
-class TileVoxelImageItem(ImageItemBase, TileItemMixIn):
-
-    def __init__(self, layer, tileItemGroup, cppLut):
-        self.setNewImageLock = threading.Lock()  
-        BaseImageItem = ImageItemBase
-        BaseImageItem.__init__(self, cppLut=cppLut)   
-        TileItemMixIn.__init__(self,layer=layer, tileItemGroup=tileItemGroup)
-        self.lastStemp = time.clock()
-        self.newImgDict = dict()
-        self.label = 1
-    def onUpdateFinished(self, updateData):
-        #print "update finished",updateData.pos
-        ts = updateData.ts
-        #print ts
-        #print "own ts",self.lastStemp,"update ts",ts
-        if ts >= self.lastStemp:
-            #print "FRESH UPDATE"
-            self.setNewImageLock.acquire()
-            self.setPos(*updateData.tileInfo.roi2d.begin)
-            self.lastStemp = ts
-            newImg,qimg = self.newImgDict.pop(ts)
-            self.setImage(newImg, qimg=qimg)
-            #print self.levels
-            self.setNewImageLock.release()
-        else:
-            #print "bad updatre"
-            self.setNewImageLock.acquire()
-            self.newImgDict.pop(ts)
-            self.setNewImageLock.release()
-
-    def setImageToUpdateFrom(self, newImage, ts, qimg=None):
-        self.setNewImageLock.acquire()
-        self.newImgDict[ts] = ( newImage.copy(), qimg)
-        self.setNewImageLock.release()
-
     def mouseClickEvent(self, ev, double=False):
-        pos = ev.pos()
-        x = int(pos.x())
-        y = int(pos.y())
-        spLabel = self.image[x,y]
-
-        label = self.layer.label
-        if label == 0 :
-            del self.layer.objectLabels[long(spLabel)]
-        else:
-            self.layer.objectLabels[long(spLabel)] = label
-        self.layer.objectLabels[long(spLabel)] = self.layer.label
-        self.layer.sigCppLutChanged.emit()
-
-    def onLabelChanged(self, label):
-        self.label = label
-
+        if self.onMouseClickCallback is not None:
+            self.onMouseClickCallback(self,ev)
 
 
 

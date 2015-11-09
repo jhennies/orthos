@@ -8,6 +8,7 @@ from  .. import *
 from  ..infinite_line import *
 from  infinite_grid_lines import *
 from tile_item_group import *
+from tile_grid import *
 
 def axisColor(axis,val=200):
     c=[0,0,0]
@@ -81,7 +82,9 @@ class InfiniteBlockedViewBox(pg.ViewBox):
 
 
         # new better tiling
-        self.tileGrid = TileGrid(self,0,tileGridShape=(20,20))
+        self.tileGrid = DynamicTileGrid(self,0,tileGridShape=(10,10))
+        self.staticTileGrid = StaticTileGrid(self,0)
+        
         self.addItem(self.tileGrid)
         #navigation lines
         self.axis0Line = InfiniteLine(movable=True, angle=90,pen=pg.mkPen(color=axisColor(viewAxis[0]),width=3),

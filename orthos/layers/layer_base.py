@@ -9,26 +9,6 @@ import time
 from orthos_cpp import *
 # request which can be send to a layer
 
-class LayerRequestBase(object):
-    def __init__(self):
-        pass
-
-class AxisAligned3dBlockRequest(LayerRequestBase):
-    def __init__(self):
-        super(AxisAligned3dBlockRequest, self).__init__()
-
-class AxisAligned2dBlockRequest(LayerRequestBase):
-    def __init__(self):
-        super(AxisAligned2dBlockRequest, self).__init__()
-
-class Arbitrary3dBlockRequest(LayerRequestBase):
-    def __init__(self):
-        super(Arbitrary3dBlockRequest, self).__init__()
-
-class Arbitrary2dBlockRequest(LayerRequestBase):
-    def __init__(self):
-        super(Arbitrary2dBlockRequest, self).__init__()
-
 
 
 
@@ -308,12 +288,30 @@ class ObjectLayer(CppLutLayer):
         super(ObjectLayer,self).__init__(name=name,dataSource=dataSource, cppLut=cppLut, trackMinMax=False)
 
 
+
     def makeTileGraphicsItem(self,layer, tileItemGroup):
-        ti = TileVoxelImageItem(layer=layer, tileItemGroup=tileItemGroup, cppLut = self.cppLut)
-        self.sigAlphaChanged.connect(ti.setOpacity)
-        self.sigVisibilityChanged.connect(ti.onChangeLayerVisible)
-        self.sigCppLutChanged.connect(ti.cppLutChanged)
-        return ti
+
+        def onMouseClickCallback(tileItem, ev):
+            pos = ev.pos()
+            x = int(pos.x())
+            y = int(pos.y())
+            spLabel = tileItem.image[x,y]
+
+            label = tileItem.layer.label
+            if label == 0 :
+                del tileItem.layer.objectLabels[long(spLabel)]
+            else:
+                tileItem.layer.objectLabels[long(spLabel)] = label
+            tileItem.layer.objectLabels[long(spLabel)] = tileItem.layer.label
+            tileItem.layer.sigCppLutChanged.emit()
+
+
+        tileItem = TileImageItem(layer=layer, tileItemGroup=tileItemGroup, cppLut = self.cppLut)
+        self.sigAlphaChanged.connect(tileItem.setOpacity)
+        self.sigVisibilityChanged.connect(tileItem.onChangeLayerVisible)
+        self.sigCppLutChanged.connect(tileItem.cppLutChanged)
+        tileItem.onMouseClickCallback = onMouseClickCallback
+        return tileItem
 
     def makeCtrlWidget(self):
         return ObjectLayerCtrl(layer=self)
@@ -324,6 +322,14 @@ class ObjectLayer(CppLutLayer):
 
     def onLabelChanged(self, label):
         self.label = label
+
+
+
+
+
+
+
+
 
 
 class PaintLayer(CppLutLayer):
@@ -340,7 +346,7 @@ class PaintLayer(CppLutLayer):
             [0,0,0,0],
             [255,0,0,255],
             [0,255,0,255],
-            [255,0,255,255],
+            [0,0,255,255],
         ]
         self.labelColors = numpy.array(self.labelColors,dtype='uint8')
         

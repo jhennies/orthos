@@ -83,10 +83,21 @@ public:
         const Blocking2d & blocking2d,
         const Shape2d & tilingShape 
     )
-
     :   blocking2d_(blocking2d),
         currentRoi_(Shape2d(0),Shape2d(0)),
         tilingShape_(tilingShape),
+        hasTilingShape_(true),
+        visibleBlocks_()
+    {
+    }
+
+    VisibleBlocksManager(
+        const Blocking2d & blocking2d
+    )
+    :   blocking2d_(blocking2d),
+        currentRoi_(Shape2d(0),Shape2d(0)),
+        tilingShape_(0),
+        hasTilingShape_(false),
         visibleBlocks_()
     {
     }
@@ -107,20 +118,33 @@ public:
     ){
 
         std::vector<size_t>  iBlocks;
-
-        Shape2 bbegin = begin/blocking2d_.blockShape();
         const Block2d testBlock(begin, end);
 
-        vigra::MultiCoordinateIterator<2> iter(tilingShape_);
-        vigra::MultiCoordinateIterator<2> endIter(iter.getEndIterator());
+        if(hasTilingShape_){
+            Shape2 bbegin = begin/blocking2d_.blockShape();
+            
 
-        for(; iter!=endIter; ++iter){
-            const Shape2 coord(*iter);
-            const Shape2 blockCoord = coord + bbegin;
-            const Block2d block =  blocking2d_.blockDescToBlock(blockCoord);
-            if(testBlock.intersects(block)){
-                int bi = blockCoord[0] + blockCoord[1]*blocking2d_.blocksPerAxis()[0];
-                iBlocks.push_back(bi);
+            vigra::MultiCoordinateIterator<2> iter(tilingShape_);
+            vigra::MultiCoordinateIterator<2> endIter(iter.getEndIterator());
+
+            for(; iter!=endIter; ++iter){
+                const Shape2 coord(*iter);
+                const Shape2 blockCoord = coord + bbegin;
+                const Block2d block =  blocking2d_.blockDescToBlock(blockCoord);
+                if(testBlock.intersects(block)){
+                    int bi = blockCoord[0] + blockCoord[1]*blocking2d_.blocksPerAxis()[0];
+                    iBlocks.push_back(bi);
+                }
+            }
+        }
+        else{
+            int bi = 0 ;
+            for(auto blockIter = blocking2d_.blockBegin(); blockIter!=blocking2d_.blockEnd(); ++blockIter){
+                auto  block =*blockIter;
+                if(testBlock.intersects(block)){
+                    iBlocks.push_back(bi);
+                }
+                ++bi;
             }
         }
         return std::move(iBlocks);
@@ -186,6 +210,7 @@ private:
     const Blocking2d & blocking2d_;
     Block2d currentRoi_;
     Shape2d tilingShape_;
+    bool hasTilingShape_;
     std::set<size_t> visibleBlocks_;
     
 };
@@ -481,5 +506,37 @@ private:
 };
 
 
+
+
+class StaticTileGridManager{
+public:
+    StaticTileGridManager(
+        const Blocking2d & blocking2d,
+        const size_t scrollAxis,
+        const Shape2d & viewAxis
+    )
+    :   blocking2d_(blocking2d),
+        scrollAxis_(scrollAxis),
+        viewAxis_(viewAxis),
+        visibleBlocksManager_(blocking2d),
+        timeCoordinate_(),
+        scrollCoordinate_(),
+        tileInfos_(blocking2d_.numBlocks())
+    {
+    }
+public:
+
+    const Blocking2d  blocking2d_;
+    size_t scrollAxis_;
+    Shape2d viewAxis_;
+    VisibleBlocksManager visibleBlocksManager_;
+
+
+    uint64_t timeCoordinate_;
+    uint64_t scrollCoordinate_;
+
+    // infos per tile
+    std::vector<TileInfo> tileInfos_;
+};
 
 
