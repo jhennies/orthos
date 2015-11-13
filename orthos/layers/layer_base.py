@@ -106,7 +106,7 @@ class LayerBase(QtCore.QObject):
         self.onTileUpdate(tileItem)
     def onTileDisappear(self, tileItem):
         pass
-    def onScrollCoordinateChanged(self, tileItem):
+    def onTimeCoordinateChanged(self, tileItem):
         self.onTileUpdate(tileItem)
     def onScrollCoordinateChanged(self, tileItem):
         self.onTileUpdate(tileItem)
@@ -182,7 +182,9 @@ class CppLutLayer(PixelLayerBase):
 
         def fetchData(item, ts, tileInfo, dataSource, oldMinMax):
             if tileInfo == item.tileInfo():
-                data = dataSource[tileInfo.slicing3d()].squeeze()
+
+                data = dataSource.getData(spatialSlicing=tileInfo.slicing3d(),
+                                          t=tileInfo.timeCoordinate).squeeze()
                 
 
                 # if levels are automatic, we need to 

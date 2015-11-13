@@ -109,7 +109,7 @@ updateCurrentRoi(
     vigra::NumpyArray<1,uint64_t> an(Shape1(a.size())),dn(Shape1(d.size()));
     std::copy(a.begin(),a.end(),an.begin());
     std::copy(d.begin(),d.end(),dn.begin());
-    return python::make_tuple(an,dn);
+    return python::make_tuple(vigra::NumpyAnyArray(an),vigra::NumpyAnyArray(dn));
 }
 
 
@@ -172,7 +172,7 @@ void exportTileGrid(){
             .def("updateScrollCoordinate",&Tgm::updateScrollCoordinate)
             .def("tileInfo",&Tgm::tileInfo,python::return_internal_reference<>())
             .def("nVisibleTiles",&Tgm::nVisibleTiles)
-            .def("updateCurrentRoi",vigra::registerConverters(updateCurrentRoi<Tgm>))
+            .def("updateCurrentRoi",vigra::registerConverters(&updateCurrentRoi<Tgm>))
             .def("visibleBlocks",vigra::registerConverters(&visibleBlocks<Tgm>))
             .def("visibleTiles",vigra::registerConverters(&visibleTiles<Tgm>))
             .def("visibleTilesInRoi2D",vigra::registerConverters(&visibleTilesInRoi2D<Tgm>))
@@ -190,7 +190,7 @@ void exportTileGrid(){
             .def("updateScrollCoordinate",&Tgm::updateScrollCoordinate)
             .def("tileInfo",&Tgm::tileInfo,python::return_internal_reference<>())
             .def("nVisibleTiles",&Tgm::nVisibleTiles)
-            .def("updateCurrentRoi",vigra::registerConverters(updateCurrentRoi<Tgm>))
+            .def("updateCurrentRoi",vigra::registerConverters(&updateCurrentRoi<Tgm>))
             //.def("visibleBlocks",vigra::registerConverters(&visibleBlocks<Tgm>))
             .def("visibleTiles",vigra::registerConverters(&visibleTiles<Tgm>))
             .def("visibleTilesInRoi2D",vigra::registerConverters(&visibleTilesInRoi2D<Tgm>))

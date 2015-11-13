@@ -1,8 +1,8 @@
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui, QtCore
 import numpy
-from ..tiling_image_item import *
-from tiling import VisibleBlocks
+#from ..tiling_image_item import *
+#from tiling import VisibleBlocks
 
 
 def make3dSlicing(begin,end):

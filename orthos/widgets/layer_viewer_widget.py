@@ -39,7 +39,7 @@ class LayerViewerOptions(object):
 class  MainWindow(QtGui.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow,self).__init__(*args,**kwargs)
-
+        self.closeCallback = None
     def closeEvent(self,event):
         if self.closeCallback is not None:
             self.closeCallback()

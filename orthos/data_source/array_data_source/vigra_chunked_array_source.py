@@ -8,6 +8,7 @@ class VigraChunkedArrayHdf5(ArrayDataSourceBase):
         self.chunkedArray = vigra.ChunkedArrayHDF5(**kwargs)
         s = self.chunkedArray.shape
         d = self.chunkedArray.dtype
+        self.dimension = len(s)
         super(VigraChunkedArrayHdf5, self).__init__(shape=s,dtype=d,
                                                     mutable=mutable)
 
@@ -15,6 +16,14 @@ class VigraChunkedArrayHdf5(ArrayDataSourceBase):
     def __getitem__(self,key):
         return self.chunkedArray[key]
 
+
+    def getData(self, spatialSlicing, t=None):
+        if self.dimension == 3:
+            return  self.chunkedArray[spatialSlicing]
+        else:
+            tslice = (slice(t,t+1),)
+            slicing  = spatialSlicing + tslice
+            return  self.chunkedArray[slicing]
 
     def commitSubarray(self,start,val):
         print start

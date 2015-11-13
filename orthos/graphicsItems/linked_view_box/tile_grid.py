@@ -48,6 +48,8 @@ class DynamicTileGrid(pg.ItemGroup):
 
     def onViewBoxViewRectChanged(self):
         minCoord, maxCoord = self.viewBox.integralViewBounds2()
+        minCoord = [float(c) for c in minCoord]
+        maxCoord = [float(c) for c in maxCoord]
         aTiles,dTiles = self.tileGridManager.updateCurrentRoi(minCoord, maxCoord)
         if(len(dTiles)>0):
             #print "dTiles",dTiles

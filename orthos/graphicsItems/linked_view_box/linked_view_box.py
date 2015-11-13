@@ -197,7 +197,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
 
     def onTimeChanged(self, newTime):
         self.timeCoordinate = newTime
-        self.tileGrid.onTimeCoordinateChanged(newScrollCoordinate)
+        self.tileGrid.onTimeCoordinateChanged(newTime)
 
     def rectChanged(self, vr):
         pass
