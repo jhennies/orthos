@@ -5,6 +5,8 @@
 #--------------------------------------------------------------
 add_library( _orthos_cpp SHARED
     orthos_cpp.cxx
+    #extend_qt.cxx
+    layer.cxx
 )
 #--------------------------------------------------------------
 # Link libraries

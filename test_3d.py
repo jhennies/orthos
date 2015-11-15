@@ -36,7 +36,7 @@ with vigra.Timer("create raw layer"):
 
 
 
-if False:
+if True:
     with vigra.Timer("create pmap layer"):
         # pmap layer
         f = "/home/tbeier/Desktop/input/pmap_c1.h5"
@@ -83,7 +83,7 @@ with vigra.Timer("create viewer"):
 
 with vigra.Timer("add raw layer"):
     viewerWidget.addLayer(rawLayer)
-if False:
+if True:
     with vigra.Timer("add pmap layer"):
         viewerWidget.addLayer(pmapLayer)
     with vigra.Timer("add sv layer"):
@@ -92,6 +92,13 @@ if False:
         viewerWidget.addLayer(objectLayer)
     with vigra.Timer("add paint layer"):
         viewerWidget.addLayer(paintLayer)
+
+#data = numpy.random.ones(*spatialShape)*255
+#data = data.astype('uint8')
+#ds = NumpyArrayDataSource(data)
+#for x in range(20):
+#    pmapLayer = GrayscaleLayer(name='pmap%d'%x,levels='auto',dataSource=ds,useLut=True)
+#    viewerWidget.addLayer(pmapLayer)
 
 with vigra.Timer("range changed"):
     viewerWidget.rangeChanged()

@@ -19,7 +19,7 @@ mw.resize(800, 600)
 
 
 
-if False:
+if True:
         
     print "chuneked 4d data"
     data =  numpy.random.rand(10, 200,200,200)*255.0

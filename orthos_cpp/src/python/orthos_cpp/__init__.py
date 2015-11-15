@@ -54,7 +54,9 @@ class ValToRgba(object):
         numpy.int32     : 'int32',
         numpy.int64     : 'int64',
         numpy.float32   : 'float32',
-        numpy.float64   : 'float64'
+        numpy.float64   : 'float64',
+
+        numpy.dtype('uint8') : 'uint8'
     }
 
     @classmethod

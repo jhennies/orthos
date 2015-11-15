@@ -69,7 +69,7 @@ include_directories(${VIGRA_INCLUDE_DIR})
 
 FIND_PACKAGE(Threads REQUIRED)  # includes pthread
 FIND_PACKAGE(NUMPY REQUIRED)
-include_directories(${DerPYTHON_NUMPY_INCLUDE_DIR})
+include_directories(${PYTHON_NUMPY_INCLUDE_DIR})
 include(VigraFindPackage)
 include(FindVIGRANUMPY_DEPENDENCIES)
 
@@ -91,6 +91,14 @@ endif(WITH_OPENMP)
 
 
 
+#-------------------------------------------------------------------------------------------------------------------
+# Qt4
+#-------------------------------------------------------------------------------------------------------------------
+#FIND_PACKAGE(Qt4 REQUIRED)
+#include_directories(${QT_QTCORE_INCLUDE_DIR})
+#include_directories(${QT_QTGUI_INCLUDE_DIR})
+#message(STATUS "THIS IS A FUCKING HACK TO INCLUDE QT4!")
+#include_directories("/usr/include/qt4")
 #-------------------------------------------------------------------------------------------------------------------
 # source directory
 #-------------------------------------------------------------------------------------------------------------------

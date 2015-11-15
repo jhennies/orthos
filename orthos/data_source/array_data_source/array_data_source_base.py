@@ -8,6 +8,6 @@ class ArrayDataSourceBase(DataSourceBase):
         self.shape = shape
         self.dtype = dtype
 
-    @abstractmethod
+    #@abstractmethod
     def __getitem__(self,key):
         pass
