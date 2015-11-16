@@ -9,7 +9,7 @@ from orthos.widgets import *
 from orthos.layers import *
 from orthos.data_source import *
 
-
+pg.setConfigOptions(antialias=False,useOpenGL=False,useWeave=True)
 
 app = QtGui.QApplication([])
 mw = MainWindow()

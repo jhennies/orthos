@@ -143,7 +143,7 @@ class ViewBoxWidget(QtGui.QWidget):
  
 
         # graphics view
-        self.gv = pg.GraphicsView(useOpenGL =True)
+        self.gv = pg.GraphicsView()#useOpenGL =True)
         l = self.glayout
         
         #l.setHorizontalSpacing(1)
