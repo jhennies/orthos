@@ -1,23 +1,24 @@
+from __future__ import division
 import numpy
 np = numpy
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 from pyqtgraph.Qt import QtCore, QtGui
 
-
-
 class RenderWidget(QtGui.QWidget):
     def __init__(self, inputShape):
         super(RenderWidget,self).__init__()
 
         self.inputShape = inputShape
-        self.viewerPos = [0,0,0]
+        self.relativeInputShape = tuple([d / min(inputShape) for d in inputShape])
+        self.viewerPos = [0, 0, 0]
         self.planes = [None,None,None]
         self.glw = gl.GLViewWidget()
         self.setupUI()
         self.setupGL()
         self.glw.opts['distance'] = 3
         self.glw.show()
+
     def setupUI(self):
         self.mainLayout = QtGui.QHBoxLayout()
         self.setLayout(self.mainLayout)
@@ -25,7 +26,7 @@ class RenderWidget(QtGui.QWidget):
     
     def setupGL(self):
         
-        shape = self.inputShape
+        shape = self.relativeInputShape
         w = self.glw
 
         size = QtGui.QVector3D(-1*shape[0],-1*shape[1],0.01)
@@ -52,6 +53,7 @@ class RenderWidget(QtGui.QWidget):
         self.setPlanePos(2,p)
     def setPlanePos(self, axis, p):
         t=[0]*3
+        p = p / min(self.inputShape)
         #print self.planes[axis].transform()
         if self.viewerPos[axis] is None:
             t[axis]=p

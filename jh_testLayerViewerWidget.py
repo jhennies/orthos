@@ -17,10 +17,7 @@ mw.setWindowTitle('Orthos')
 mw.show()
 mw.resize(800, 600)
 
-
-
-
-shape = (200,100,50)
+shape = (200, 100, 50)
 data = numpy.random.rand(*shape)*255.0
 data = data.astype('uint8')
 
@@ -38,29 +35,12 @@ mw.setCentralWidget(viewerWidget)
 
 for x in range(1):
     with vigra.Timer("create raw layer"):
-        f = "/home/tbeier/Desktop/input/raw.h5"
-        #f = "/media/tbeier/data/datasets/hhess/2x2x2nm_chunked/data.h5"
         rawSource = NumpyArrayDataSource(data)
-        rawLayer = GrayscaleLayer(name='raw%d'%x,levels=[0,255],dataSource=rawSource,useLut=True)
+        rawLayer = GrayscaleLayer(name='raw%d' % x, levels=[0, 255], dataSource=rawSource, useLut=True)
         viewerWidget.addLayer(rawLayer)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 with vigra.Timer("range changed"):
     viewerWidget.rangeChanged()
-
-
 
 
 ## Start Qt event loop unless running in interactive mode.

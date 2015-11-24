@@ -22,13 +22,19 @@ class Navigator(object):
         self.nTimePoints = nTimePoints
         self.planePosition = [0,0,0]
         self.viewBoxWidgets = []
+        self.renderWidget = None
 
-    def setViewBoxWidgets(self, viewBoxWidgets):
+    def setViewBoxWidgets(self, viewBoxWidgets, renderWidget):
         self.viewBoxWidgets = viewBoxWidgets
+        self.renderWidget = renderWidget
 
     def changedPlane(self, scrollAxis, scrollAxisCoordinate, updatedBy=None):
         self.planePosition[scrollAxis] = scrollAxisCoordinate
         print self.planePosition
+        for i in range(0, 3):
+            self.renderWidget.setPlanePos(i, self.planePosition[i])
+        # self.renderWidget.setPlanePos(1, self.planePosition[1])
+        # self.renderWidget.setPlanePos(2, self.planePosition[2])
         for vbw in self.viewBoxWidgets:
             vb = vbw.viewBox
             if vb.scrollAxis == scrollAxis:
@@ -41,7 +47,6 @@ class Navigator(object):
                 else:
                     if vb.axis1Line != updatedBy:
                         vb.axis1Line.setPos((0,scrollAxisCoordinate),silent=True)
-
 
     def change2PlanesByDoubleClick(self, scrollAxis, scrollAxisCoordinates):
         
@@ -74,12 +79,18 @@ def linked3dViewBoxWidgets(spatialShape, nTimePoints, options):
     pixelLayers = PixelLayers()
     layersCtrl = LayersCtrlWidget()
     navigator = Navigator(spatialShape=spatialShape, nTimePoints=nTimePoints)
-    x = ViewBoxWidget(navigator=navigator,pixelLayers=pixelLayers,scrollAxis=0, viewAxis=[1,2])
-    y = ViewBoxWidget(navigator=navigator,pixelLayers=pixelLayers,scrollAxis=1, viewAxis=[0,2])
-    z = ViewBoxWidget(navigator=navigator,pixelLayers=pixelLayers,scrollAxis=2, viewAxis=[0,1])
+    minPixelSize = [options.minPixelSize, options.minPixelSize]
+    maxPixelSize = [options.maxPixelSize, options.maxPixelSize]
+    x = ViewBoxWidget(navigator=navigator,pixelLayers=pixelLayers,scrollAxis=0, viewAxis=[1,2],
+                      minPixelSize=minPixelSize, maxPixelSize=maxPixelSize)
+    y = ViewBoxWidget(navigator=navigator,pixelLayers=pixelLayers,scrollAxis=1, viewAxis=[0,2],
+                      minPixelSize=minPixelSize, maxPixelSize=maxPixelSize)
+    z = ViewBoxWidget(navigator=navigator,pixelLayers=pixelLayers,scrollAxis=2, viewAxis=[0,1],
+                      minPixelSize=minPixelSize, maxPixelSize=maxPixelSize)
     widgets = [x,y,z]
-    renderWidget = RenderWidget([1,1,1])
-    navigator.setViewBoxWidgets(widgets)
+
+    renderWidget = RenderWidget(spatialShape)
+    navigator.setViewBoxWidgets(widgets, renderWidget)
 
     if options.hasTimeAxis:
         timeCtrlWidget = TimeCtrlWidget(navigator=navigator)
