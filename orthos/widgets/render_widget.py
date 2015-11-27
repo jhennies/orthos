@@ -20,8 +20,9 @@ class RenderWidget(QtGui.QWidget):
         self.glw = gl.GLViewWidget()
         self.setupUI()
         self.setupGL()
-        self.glw.opts['distance'] = 3
-        self.glw.opts['center'] = QtGui.QVector3D(0, self.relativeInputShape[2], 0)
+        self.glw.opts['distance'] = max(self.relativeInputShape) * 1.1
+        self.glw.opts['center'] = QtGui.QVector3D(0, self.relativeInputShape[1], 0)
+        self.glw.opts['fov'] = 50
         self.glw.show()
         self.widgets = widgets
         self.widgets[0].viewBox.sigRectChanged.connect(self.onWidget0ViewBoxRectChanged)
