@@ -17,6 +17,7 @@ class RenderWidget(QtGui.QWidget):
         self.sectionPosYZ = [0, 0, 0]
         self.planes = [None,None,None]
         self.sections = [None, None, None]
+        self.lines = [None, None, None]
         self.glw = gl.GLViewWidget()
         self.setupUI()
         self.setupGL()
@@ -48,31 +49,52 @@ class RenderWidget(QtGui.QWidget):
         shape = self.relativeInputShape
         w = self.glw
 
+        # self.xy.setSize
+        size = QtGui.QVector3D(-1*shape[0],-1*shape[1], 0)
+        self.sections[0] = gl.GLBoxItem(size=size, color=(255,0,0))
+        size = QtGui.QVector3D(-1*shape[0],0,-1*shape[2])
+        self.sections[1] = gl.GLBoxItem(size=size, color=(0,255,0))
+        size = QtGui.QVector3D(0,-1*shape[1],-1*shape[2])
+        self.sections[2] = gl.GLBoxItem(size=size, color=(0,0,255))
+        w.addItem(self.sections[0])
+        w.addItem(self.sections[1])
+        w.addItem(self.sections[2])
+
         size = QtGui.QVector3D(-1*shape[0],1*shape[1],0)
-        self.xy = gl.GLBoxItem(size=size,color=(0,0,255))
+        # self.xy = gl.GLBoxItem(size=size,color=(0,0,255))
+        self.xy = gl.GLBoxItem(size=size,color=(0,0,255, 128))
         w.addItem(self.xy)
 
         size = QtGui.QVector3D(-1*shape[0],0,-1*shape[2])
-        self.xz = gl.GLBoxItem(size=size,color=(0,255,0))
+        # self.xz = gl.GLBoxItem(size=size,color=(0,255,0))
+        self.xz = gl.GLBoxItem(size=size,color=(0,255,0, 128))
         w.addItem(self.xz)
 
         size = QtGui.QVector3D(0,1*shape[1],-1*shape[2])
-        self.yz = gl.GLBoxItem(size=size,color=(255,0,0))
+        # self.yz = gl.GLBoxItem(size=size,color=(255,0,0))
+        self.yz = gl.GLBoxItem(size=size,color=(255,0,0, 128))
         w.addItem(self.yz)
 
         self.planes[0] = self.yz
         self.planes[1] = self.xz
         self.planes[2] = self.xy
-        # self.xy.setSize
-        size = QtGui.QVector3D(-1*shape[0],-1*shape[1], 0)
-        self.sections[0] = gl.GLBoxItem(size=size,color=(255,0,0))
-        size = QtGui.QVector3D(-1*shape[0],0,-1*shape[2])
-        self.sections[1] = gl.GLBoxItem(size=size,color=(0,255,0))
-        size = QtGui.QVector3D(0,-1*shape[1],-1*shape[2])
-        self.sections[2] = gl.GLBoxItem(size=size,color=(0,0,255))
-        w.addItem(self.sections[0])
-        w.addItem(self.sections[1])
-        w.addItem(self.sections[2])
+
+        pos = np.vstack([[0,0,0],[-shape[0],0,0]])
+        # color = (0, 255, 255, 255)
+        color = (1, 1, 1, 0.25)
+        self.lines[0] = gl.GLLinePlotItem(pos=pos, color=color)
+        pos = np.vstack([[0,0,0],[0,shape[1],0]])
+        # color = (255, 0, 255, 255)
+        color = (1, 1, 1, 0.25)
+        self.lines[1] = gl.GLLinePlotItem(pos=pos, color=color)
+        pos = np.vstack([[0,0,0],[0,0,-shape[2]]])
+        # color = (255, 255, 0, 255)
+        color = (1, 1, 1, 0.25)
+        self.lines[2] = gl.GLLinePlotItem(pos=pos, color=color)
+        w.addItem(self.lines[0])
+        w.addItem(self.lines[1])
+        w.addItem(self.lines[2])
+
 
     def setYZPos(self, p):
         self.setPlanePos(0,p)
@@ -92,6 +114,11 @@ class RenderWidget(QtGui.QWidget):
             t[axis]=op-q
         t[1] = -t[1]
         self.planes[axis].translate(*tuple(t))
+
+        for i in range(0, 3):
+            if not i == axis:
+                self.lines[i].translate(*tuple(t))
+
         self.setSectionPos(axis, p)
         self.viewerPos[axis] = p
 
