@@ -202,7 +202,7 @@ class InfiniteBlockedViewBox(pg.ViewBox):
     def rectChanged(self, vr):
         pass
 
-    
+
     def mouseClickEvent(self, ev, double=False):
         pos = self.mapToView(ev.pos())
         pos = pos.x(),pos.y()

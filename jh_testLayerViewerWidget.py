@@ -17,7 +17,7 @@ mw.setWindowTitle('Orthos')
 mw.show()
 mw.resize(800, 600)
 
-shape = (200, 100, 50)
+shape = (600, 300, 200)
 data = numpy.random.rand(*shape)*255.0
 data = data.astype('uint8')
 

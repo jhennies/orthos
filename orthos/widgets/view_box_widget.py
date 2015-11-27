@@ -89,7 +89,7 @@ def linked3dViewBoxWidgets(spatialShape, nTimePoints, options):
                       minPixelSize=minPixelSize, maxPixelSize=maxPixelSize)
     widgets = [x,y,z]
 
-    renderWidget = RenderWidget(spatialShape)
+    renderWidget = RenderWidget(spatialShape, widgets)
     navigator.setViewBoxWidgets(widgets, renderWidget)
 
     if options.hasTimeAxis:
